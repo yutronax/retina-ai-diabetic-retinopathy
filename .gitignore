@@ -2,10 +2,9 @@
 __pycache__/
 *.pyc
 
-data/raw/
-data/splits/
-outputs/checkpoints/
-outputs/logs/
+data/*
+!data/.gitkeep
+outputs/
 
 .ipynb_checkpoints/
 *.egg-info/

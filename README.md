@@ -87,6 +87,21 @@ outputs/
   logs/                # eğitim logları / metrikler (git'e dahil değil)
 ```
 
+## Hızlı Doğrulama (Smoke Test)
+
+Tam veri seti/eğitim öncesi pipeline'ın uçtan uca çalıştığını doğrulamak için küçük bir örneklemle hızlı test:
+
+```bash
+# data/raw/.../train|val|test/<sınıf>/ altından her sınıftan birkaç görüntü kopyalayıp
+# data/smoke altında küçük bir örneklem oluşturun, sonra:
+python -m src.train --data-dir data/smoke --config configs/smoke.yaml
+python -m src.evaluate --data-dir data/smoke --checkpoint outputs/checkpoints_smoke/best_model.pt --config configs/smoke.yaml
+```
+
+`configs/smoke.yaml`, 2 epoch ve küçük batch ile hızlı doğrulama için ayrı bir config'tir; gerçek eğitimde
+`configs/config.yaml` kullanılmalıdır. Bu proje üzerinde 200 görüntülük bir örneklemle pipeline (eğitim →
+değerlendirme → tahmin) uçtan uca doğrulanmıştır.
+
 ## Notlar
 
 - Model mimarisi `configs/config.yaml` üzerinden `efficientnet_b0` / `resnet50` arasında değiştirilebilir.

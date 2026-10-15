@@ -1,0 +1,22 @@
+seed: 42
+
+data:
+  image_size: 224
+  num_classes: 5
+  class_names: ["No_DR", "Mild", "Moderate", "Severe", "Proliferate_DR"]
+  batch_size: 16
+  num_workers: 0
+
+model:
+  arch: efficientnet_b0
+  pretrained: true
+  dropout: 0.3
+
+train:
+  epochs: 2
+  lr: 0.0003
+  weight_decay: 0.00001
+  patience: 5
+  use_class_weights: true
+  checkpoint_dir: outputs/checkpoints_smoke
+  log_dir: outputs/logs_smoke
