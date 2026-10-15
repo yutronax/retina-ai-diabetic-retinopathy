@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+
+data/raw/
+data/splits/
+outputs/checkpoints/
+outputs/logs/
+
+.ipynb_checkpoints/
+*.egg-info/
+
+.DS_Store
+Thumbs.db
