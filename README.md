@@ -87,6 +87,12 @@ outputs/
   logs/                # eğitim logları / metrikler (git'e dahil değil)
 ```
 
+## Colab'da GPU ile Eğitim
+
+CPU'da tam eğitim çok yavaş olduğundan, GPU ile hızlı eğitim için [`notebooks/colab_train.ipynb`](notebooks/colab_train.ipynb)
+dosyasını [Google Colab](https://colab.research.google.com/github/yutronax/retina-ai-diabetic-retinopathy/blob/master/notebooks/colab_train.ipynb)'da açabilirsiniz. Notebook repoyu klonlar, Kaggle veri setini indirir, GPU ile eğitimi
+çalıştırır ve en iyi modeli (`best_model.pt`) bilgisayarınıza indirmenizi sağlar.
+
 ## Hızlı Doğrulama (Smoke Test)
 
 Tam veri seti/eğitim öncesi pipeline'ın uçtan uca çalıştığını doğrulamak için küçük bir örneklemle hızlı test:
