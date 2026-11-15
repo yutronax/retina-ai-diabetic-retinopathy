@@ -11,3 +11,17 @@ outputs/
 
 .DS_Store
 Thumbs.db
+
+# C# / Visual Studio
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+# Downloaded datasets
+GoruntuIslemeOdevleri/data/
+# Regenerable batch outputs (keep results.json for charts)
+GoruntuIslemeOdevleri/sunum/sonuclar/*
+GoruntuIslemeOdevleri/sunum/sonuclar_once/*
+!GoruntuIslemeOdevleri/sunum/sonuclar/results.json
+!GoruntuIslemeOdevleri/sunum/sonuclar_once/results.json
