@@ -18,11 +18,8 @@ Thumbs.db
 .vs/
 *.user
 *.suo
-# Local ML environments, downloaded datasets and training artifacts
-GoruntuIslemeOdevleri/.venv-yolo/
+# Downloaded datasets
 GoruntuIslemeOdevleri/data/
-GoruntuIslemeOdevleri/training/runs/
-GoruntuIslemeOdevleri/training/predictions/
 # Regenerable batch outputs (keep results.json for charts)
 GoruntuIslemeOdevleri/sunum/sonuclar/*
 GoruntuIslemeOdevleri/sunum/sonuclar_once/*

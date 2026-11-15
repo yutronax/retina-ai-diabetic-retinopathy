@@ -40,13 +40,14 @@ def label_bars(ax, bars, fmt="{:.0f}"):
 nut_before = next(x for x in before["nuts"] if x["file"].startswith("nut1"))
 nut_after = next(x for x in after["nuts"] if x["file"].startswith("nut1"))
 fig, ax = plt.subplots(figsize=(6.4, 4))
-cats = ["Fındık", "Ceviz"]
-vals = {"Gerçek": [4, 2], "Önce": [nut_before["hazelnut"], nut_before["walnut"]],
-        "Sonra": [nut_after["hazelnut"], nut_after["walnut"]]}
+cats = ["Fındık", "Ceviz", "Ayrılamadı\n(birleşik leke)"]
+vals = {"Gerçek": [4, 2, 0],
+        "İlk sürüm": [nut_before["hazelnut"], nut_before["walnut"], 0],
+        "Son sürüm": [nut_after["hazelnut"], nut_after["walnut"], nut_after.get("unseparated", 0)]}
 w = 0.26
-for i, (name, color) in enumerate([("Gerçek", NAVY), ("Önce", GREY), ("Sonra", TEAL)]):
-    label_bars(ax, ax.bar([c + (i - 1) * w for c in range(2)], vals[name], w, label=name, color=color))
-ax.set_xticks(range(2), cats)
+for i, (name, color) in enumerate([("Gerçek", NAVY), ("İlk sürüm", GREY), ("Son sürüm", TEAL)]):
+    label_bars(ax, ax.bar([c + (i - 1) * w for c in range(3)], vals[name], w, label=name, color=color))
+ax.set_xticks(range(3), cats)
 ax.set_ylabel("Adet")
 ax.set_title("Ceviz/fındık sayımı: gerçek ve bulunan")
 ax.legend(frameon=False)
@@ -135,12 +136,12 @@ plt.close(fig)
 # 5) Otomatik eşik: 14 adayın puanı
 cand = sorted(after["threshold"], key=lambda r: r["score"])
 fig, ax = plt.subplots(figsize=(6.4, 4.6))
-labels = [f"{c['channel']}{' (ters)' if c['inverted'] else ''}" for c in cand]
-colors = [TEAL if c is cand[-1] else (GREY if c["score"] > -50 else "#E3E7EA") for c in cand]
+labels = [c["channel"] if c["channel"].startswith("RGB") else f"{c['channel']}{' (ters)' if c['inverted'] else ''}" for c in cand]
+colors = [TEAL if c is cand[-1] else (AMBER if c["channel"].startswith("RGB") else (GREY if c["score"] > -50 else "#E3E7EA")) for c in cand]
 ax.barh(labels, [max(c["score"], -3) for c in cand], color=colors)
 ax.axvline(0, color="#5F6F7B", linewidth=0.8)
 ax.set_xlabel("Puan (yüksek = daha iyi bölge)")
-ax.set_title("Van Gölü için 14 eşik adayının puanı")
+ax.set_title(f"Van Gölü için {len(cand)} eşik adayının puanı")
 ax.tick_params(axis="y", labelsize=10)
 fig.savefig(OUT / "threshold_scores.png")
 plt.close(fig)

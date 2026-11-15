@@ -16,6 +16,8 @@ internal sealed record NutAnalysis(Mat Annotated, Mat Mask, IReadOnlyList<NutIte
 {
     public int HazelnutCount => Items.Count(x => x.Kind == "Fındık");
     public int WalnutCount => Items.Count(x => x.Kind == "Ceviz");
+    /// <summary>Birden çok nesnenin birleştiği, ayrılamayan bölgeler.</summary>
+    public int UnseparatedCount => Items.Count(x => x.Kind == "Ayrılamadı");
 
     public void Dispose()
     {
@@ -53,9 +55,17 @@ internal sealed record CoinAnalysis(Mat Annotated, Mat Mask, IReadOnlyList<CoinI
 internal sealed record LakeAnalysis(Mat Annotated, Mat Mask, string ThresholdMethod, double Threshold,
     double AreaSquareMeters, double PerimeterMeters, Point2d Centroid) : IDisposable
 {
+    /// <summary>Eşik sonrası tüm bölgeler, her biri farklı renkte.</summary>
+    public Mat? ColoredRegions { get; init; }
+    public int RegionCount { get; init; }
+    /// <summary>Karşılaştırma için kontur uzunluğundan hesaplanan çevre.</summary>
+    public double ContourPerimeterMeters { get; init; }
+    public double CenterDistancePixels { get; init; }
+
     public void Dispose()
     {
         Annotated.Dispose();
         Mask.Dispose();
+        ColoredRegions?.Dispose();
     }
 }

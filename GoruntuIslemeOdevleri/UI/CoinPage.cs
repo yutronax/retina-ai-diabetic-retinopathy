@@ -15,9 +15,19 @@ internal sealed class CoinPage : PageBase
         AddButton("Fotoğraf Aç", (_, _) => LoadSource());
         AddButton("Yazı Referansı", (_, _) => LoadReference(true));
         AddButton("Tura Referansı", (_, _) => LoadReference(false));
-        AddButton("Örnekleri Yükle", (_, _) => LoadSample());
+        AddSamples("4-para", OpenSample, ("Sentetik örnek (beyaz zemin, yazı/tura referanslı)", LoadSample));
         AddButton("Paraları Analiz Et", (_, _) => Analyze(), true);
+        SetGuide(Guides.Coins);
         LoadSample();
+    }
+
+    private void OpenSample(string path)
+    {
+        _source.Dispose();
+        _source = ImageHelpers.LoadColor(path);
+        InputView.SetMat(_source);
+        Results.Text = $"Örnek: {Path.GetFileNameWithoutExtension(path)}.\r\n" +
+                       "Not: Bu gerçek fotoğraflar desenli zeminli ve paralar üst üste; klasik yöntemin zorlandığı durumu gösterir.";
     }
 
     private void LoadSample()

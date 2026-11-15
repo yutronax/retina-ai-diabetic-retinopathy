@@ -33,47 +33,55 @@ internal static class NutCounter
         Cv2.MorphologyEx(mask, mask, MorphTypes.Close, closeKernel, iterations: 2);
         FillHoles(mask);
 
-        // Birbirine değen nesneler tek leke olur; mesafe dönüşümü + havza (watershed) ile ayrılır.
+        // Birbirine değen nesneler tek leke olur; mesafe dönüşümüyle bulunan çekirdeklere göre ayrılır.
         using Mat separated = SplitTouching(mask);
         using Mat contourInput = separated.Clone();
         Cv2.FindContours(contourInput, out Point[][] contours, out _, RetrievalModes.External,
             ContourApproximationModes.ApproxSimple);
 
+        // PDF yöntemi: her bölge ayrı bir renge boyanır ve o renkteki piksel sayısı (alan) ölçülür.
         double minArea = bgr.Width * bgr.Height * 0.0012;
-        var measurements = new List<(Point[] Contour, double Area, Point2f Center, double Diameter)>();
+        var regions = new List<(Point[] Contour, double Pixels, Point2f Center, double Diameter, bool Separable)>();
+        using var regionMask = new Mat(mask.Size(), MatType.CV_8UC1);
         foreach (Point[] contour in contours)
         {
-            double area = Cv2.ContourArea(contour);
-            if (area < minArea)
+            regionMask.SetTo(Scalar.All(0));
+            Cv2.DrawContours(regionMask, [contour], -1, Scalar.All(255), -1);
+            double pixels = Cv2.CountNonZero(regionMask);
+            if (pixels < minArea)
                 continue;
 
+            // Yuvarlaklığı düşük bölge birden çok nesnenin birleşimidir: sayılmaz, "ayrılamadı" olarak işaretlenir.
             double perimeter = Math.Max(Cv2.ArcLength(contour, true), 1);
-            double circularity = 4 * Math.PI * area / (perimeter * perimeter);
-            if (circularity < 0.38)
-                continue;
-
+            double circularity = 4 * Math.PI * Cv2.ContourArea(contour) / (perimeter * perimeter);
             Cv2.MinEnclosingCircle(contour, out Point2f center, out float radius);
-            measurements.Add((contour, area, center, radius * 2.0));
+            regions.Add((contour, pixels, center, radius * 2.0, circularity >= 0.55));
         }
 
-        double split = FindLargestGapSplit(measurements.Select(x => x.Diameter).ToArray());
+        var separable = regions.Where(r => r.Separable).ToList();
+        double split = FindLargestGapSplit(separable.Select(x => x.Pixels).ToArray());
         var annotated = bgr.Clone();
+        using var overlay = bgr.Clone();
         var items = new List<NutItem>();
+        var random = new Random(3);
 
         int number = 1;
-        foreach (var item in measurements.OrderBy(x => x.Center.Y).ThenBy(x => x.Center.X))
+        foreach (var r in regions.OrderBy(x => x.Center.Y).ThenBy(x => x.Center.X))
         {
-            string kind = item.Diameter >= split ? "Ceviz" : "Fındık";
-            Scalar color = kind == "Ceviz" ? new Scalar(40, 70, 230) : new Scalar(30, 185, 70);
-            Cv2.DrawContours(annotated, [item.Contour], -1, color, 4, LineTypes.AntiAlias);
-            var textPoint = new Point((int)item.Center.X - 35, (int)item.Center.Y);
-            Cv2.PutText(annotated, $"{number}:{(kind == "Ceviz" ? "C" : "F")}", textPoint,
-                HersheyFonts.HersheySimplex, 0.75, color, 2, LineTypes.AntiAlias);
-            items.Add(new NutItem(kind, item.Area, item.Diameter, item.Center));
+            string kind = !r.Separable ? "Ayrılamadı" : r.Pixels >= split ? "Ceviz" : "Fındık";
+            Scalar fill = new(random.Next(40, 256), random.Next(40, 256), random.Next(40, 256));
+            Cv2.DrawContours(overlay, [r.Contour], -1, r.Separable ? fill : new Scalar(160, 160, 160), -1);
+            Scalar color = kind switch { "Ceviz" => new Scalar(40, 70, 230), "Fındık" => new Scalar(30, 185, 70), _ => new Scalar(90, 90, 90) };
+            Cv2.DrawContours(annotated, [r.Contour], -1, color, 4, LineTypes.AntiAlias);
+            string tag = kind switch { "Ceviz" => "C", "Fındık" => "F", _ => "?" };
+            Cv2.PutText(annotated, $"{number}:{tag} {r.Pixels / 1000:0}k px", new Point((int)r.Center.X - 60, (int)r.Center.Y),
+                HersheyFonts.HersheySimplex, 0.7, color, 2, LineTypes.AntiAlias);
+            items.Add(new NutItem(kind, r.Pixels, r.Diameter, r.Center));
             number++;
         }
+        Cv2.AddWeighted(annotated, 0.55, overlay, 0.45, 0, annotated);
 
-        Cv2.PutText(annotated, $"Findik: {items.Count(x => x.Kind == "Fındık")}  Ceviz: {items.Count(x => x.Kind == "Ceviz")}",
+        Cv2.PutText(annotated, $"Findik: {items.Count(x => x.Kind == "Fındık")}  Ceviz: {items.Count(x => x.Kind == "Ceviz")}  Ayrilamadi: {items.Count(x => x.Kind == "Ayrılamadı")}",
             new Point(18, 38), HersheyFonts.HersheySimplex, 0.9, new Scalar(20, 20, 20), 3,
             LineTypes.AntiAlias);
         mask.Dispose();

@@ -7,7 +7,8 @@ internal static class ImageHelpers
 {
     public static Mat LoadColor(string path)
     {
-        Mat image = Cv2.ImRead(path, ImreadModes.Color);
+        // Cv2.ImRead Türkçe karakterli yolları (ör. "Masaüstü") açamaz; baytlar üzerinden çözülür.
+        Mat image = Cv2.ImDecode(File.ReadAllBytes(path), ImreadModes.Color);
         if (image.Empty())
             throw new InvalidOperationException("Görüntü okunamadı: " + path);
         return image;
@@ -79,12 +80,20 @@ internal static class ImageHelpers
             int top = imageTop + (availableHeight - height) / 2;
             using Mat roi = new(canvas, new Rect(left, top, width, height));
             resized.CopyTo(roi);
-
-            Cv2.PutText(canvas, list[i].Title, new OpenCvSharp.Point(x + 12, y + 27),
-                HersheyFonts.HersheySimplex, 0.66, new Scalar(30, 30, 30), 2, LineTypes.AntiAlias);
         }
 
-        return canvas;
+        // Başlıklar GDI+ ile yazılır: OpenCV'nin Hershey fontu Türkçe karakterleri (Ö, ç, ş...) çizemez.
+        using Bitmap bitmap = ToBitmap(canvas);
+        using (Graphics g = Graphics.FromImage(bitmap))
+        using (var font = new Font("Segoe UI", 13, FontStyle.Bold, GraphicsUnit.Pixel))
+        using (var brush = new SolidBrush(Color.FromArgb(30, 30, 30)))
+        {
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+            for (int i = 0; i < list.Count; i++)
+                g.DrawString(list[i].Title, font, brush, (i % columns) * cellWidth + 12, (i / columns) * cellHeight + 10);
+        }
+        canvas.Dispose();
+        return FromBitmap(bitmap);
     }
 
     public static string SelectImageFile(IWin32Window owner, string title = "Görüntü seç")

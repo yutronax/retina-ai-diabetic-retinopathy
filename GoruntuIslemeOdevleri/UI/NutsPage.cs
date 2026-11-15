@@ -11,10 +11,11 @@ internal sealed class NutsPage : PageBase
     public NutsPage() : base("Girdi: ceviz ve fındık", "Tespit sonucu")
     {
         AddButton("Fotoğraf Aç", LoadImage);
-        AddButton("Örnek Üret", (_, _) => LoadSample(1));
+        AddSamples("1-ceviz", OpenSample, ("Sentetik örnek (7 fındık, 4 ceviz)", () => LoadSample(1)));
         AddButton("Analiz Et", (_, _) => Analyze(), true);
         AddButton("5 Örneği Doğrula", (_, _) => ValidateFive());
-        LoadSample(1);
+        SetGuide(Guides.Nuts);
+        if (FirstSample("1-ceviz", "beyaz zemin") is string first) OpenSample(first); else LoadSample(1);
     }
 
     private void LoadImage(object? sender, EventArgs e)
@@ -23,6 +24,12 @@ internal sealed class NutsPage : PageBase
         if (string.IsNullOrWhiteSpace(path)) return;
         ReplaceSource(ImageHelpers.LoadColor(path));
         Results.Text = "Fotoğraf yüklendi. Analiz Et düğmesine basın.";
+    }
+
+    private void OpenSample(string path)
+    {
+        ReplaceSource(ImageHelpers.LoadColor(path));
+        Results.Text = $"Örnek fotoğraf: {Path.GetFileNameWithoutExtension(path)}. \"Analiz Et\"e basın.";
     }
 
     private void LoadSample(int seed)
@@ -46,7 +53,8 @@ internal sealed class NutsPage : PageBase
             OutputView.SetMat(analysis.Annotated);
             Results.Text = $"Fındık sayısı : {analysis.HazelnutCount}\r\n" +
                            $"Ceviz sayısı  : {analysis.WalnutCount}\r\n" +
-                           $"Boyut ayırma eşiği: {analysis.SplitDiameter:0.0} piksel\r\n\r\n" +
+                           $"Ayrılamadı    : {analysis.UnseparatedCount} (birbirine değen nesnelerin birleşik lekesi)\r\n" +
+                           $"Ayırma eşiği : {analysis.SplitDiameter:0} piksel (alan)\r\n\r\n" +
                            string.Join("\r\n", analysis.Items.Select((x, i) =>
                                $"{i + 1,2}. {x.Kind,-7} alan={x.Area,8:0} px²  çap={x.DiameterPixels,6:0.0} px"));
         }

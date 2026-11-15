@@ -71,12 +71,13 @@ internal static class ForegroundComposer
 
         var wallLike = new Mat();
         Cv2.Threshold(distance, wallLike, tolerance, 255, ThresholdTypes.BinaryInv);
-        // Yalnızca kenara bağlı duvar bölgeleri: yüzdeki açık tonlar arka plan sayılmasın.
+        // Yalnızca ÜST kenara ve yan kenarların ÜST yarısına bağlı duvar bölgeleri alınır. Alt kenara değen
+        // omuz/kol/el gibi açık tonlu ten bölgeleri duvara benzese bile arka plan sayılmaz.
         using var labels = new Mat();
         int n = Cv2.ConnectedComponents(wallLike, labels);
         var keep = new HashSet<int>();
-        for (int x = 0; x < source.Width; x++) { keep.Add(labels.At<int>(0, x)); keep.Add(labels.At<int>(source.Height - 1, x)); }
-        for (int y = 0; y < source.Height; y++) { keep.Add(labels.At<int>(y, 0)); keep.Add(labels.At<int>(y, source.Width - 1)); }
+        for (int x = 0; x < source.Width; x++) keep.Add(labels.At<int>(0, x));
+        for (int y = 0; y < source.Height / 2; y++) { keep.Add(labels.At<int>(y, 0)); keep.Add(labels.At<int>(y, source.Width - 1)); }
         keep.Remove(0);
         var result = new Mat(source.Size(), MatType.CV_8UC1, Scalar.All(0));
         using var part = new Mat();

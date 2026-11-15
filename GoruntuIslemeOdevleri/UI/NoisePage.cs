@@ -15,7 +15,7 @@ internal sealed class NoisePage : PageBase
     public NoisePage() : base("Temiz / kenar görüntüsü", "Karşılaştırma sonucu")
     {
         AddButton("Fotoğraf Aç", (_, _) => LoadImage());
-        AddButton("Örnek", (_, _) => LoadSample());
+        AddSamples("3-tuzbiber", OpenSample, ("Sentetik örnek", LoadSample));
         AddButton("Gürültü Karşılaştır", (_, _) => CompareNoise(), true);
         AddButton("Kırık Kenar Deneyi", (_, _) => BrokenEdgeExperiment());
         AddLabel("Şablon");
@@ -33,7 +33,14 @@ internal sealed class NoisePage : PageBase
             _ranges[i] = AddNumber(0, 255, i % 2 == 0 ? 0 : 255, 58);
         }
         AddButton("Seçili İşlemi Uygula", (_, _) => ApplySelected());
-        LoadSample();
+        SetGuide(Guides.Noise);
+        if (FirstSample("3-tuzbiber", "Biber") is string first) OpenSample(first); else LoadSample();
+    }
+
+    private void OpenSample(string path)
+    {
+        ReplaceSource(ImageHelpers.LoadColor(path));
+        Results.Text = $"Temiz görüntü: {Path.GetFileNameWithoutExtension(path)}. \"Gürültü Karşılaştır\" gürültüyü kendisi ekler.";
     }
 
     private void LoadSample()
@@ -120,6 +127,17 @@ internal sealed class NoisePage : PageBase
                            $"R=[{_ranges[0].Value},{_ranges[1].Value}], G=[{_ranges[2].Value},{_ranges[3].Value}], B=[{_ranges[4].Value},{_ranges[5].Value}]";
         }
         catch (Exception ex) { ShowError(ex); }
+    }
+
+    /// <summary>Sunum için: menüdeki seçimleri koddan ayarlayıp "Seçili İşlemi Uygula" ile aynı yolu çalıştırır.</summary>
+    internal void Demo(Mat source, int kernelIndex, int operationIndex, int iterations, int[] ranges)
+    {
+        ReplaceSource(source.Clone());
+        _kernel.SelectedIndex = kernelIndex;
+        _operation.SelectedIndex = operationIndex;
+        _iterations.Value = iterations;
+        for (int i = 0; i < _ranges.Length; i++) _ranges[i].Value = ranges[i];
+        ApplySelected();
     }
 
     protected override void Dispose(bool disposing)

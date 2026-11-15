@@ -15,15 +15,34 @@ internal sealed class LakePage : PageBase
     public LakePage() : base("Uydu görüntüsü (ölçek için iki noktaya tıkla)", "Alan ve çevre sonucu")
     {
         AddButton("Uydu Görüntüsü Aç", (_, _) => LoadImage());
-        AddButton("Örnek", (_, _) => LoadSample());
+        AddSamples("5-uydu", OpenSample, ("Sentetik örnek (150 piksel = 50 km)", LoadSample));
         AddLabel("Gerçek uzunluk (m)");
         _realMeters = AddNumber(1, 10_000_000, 50_000, 105);
         AddLabel("Piksel uzunluğu");
         _pixelLength = AddNumber(1, 100_000, 150, 85, 1);
         AddButton("Ölçeği 2 Noktayla Seç", (_, _) => StartScaleSelection());
         AddButton("Alan ve Çevreyi Hesapla", (_, _) => Analyze(), true);
+        SetGuide(Guides.Lake);
         InputView.ImagePixelClicked += InputViewOnImagePixelClicked;
-        LoadSample();
+        if (FirstSample("5-uydu", "Van") is string van) OpenSample(van); else LoadSample();
+    }
+
+    /// <summary>
+    /// Gerçek örnek. Van Gölü için ölçek hazır gelir: Nemrut kalderası (238,412) – Süphan Dağı (462,270)
+    /// arası koordinatlardan ≈ 60 km, görüntüde ≈ 265 piksel.
+    /// </summary>
+    private void OpenSample(string path)
+    {
+        ReplaceSource(ImageHelpers.LoadColor(path));
+        if (Path.GetFileName(path).Contains("Van", StringComparison.OrdinalIgnoreCase))
+        {
+            _realMeters.Value = 60_000;
+            _pixelLength.Value = (decimal)Math.Round(Math.Sqrt(224 * 224 + 142 * 142), 1);
+            Results.Text = "Örnek: Van Gölü (Landsat). Ölçek hazır: Nemrut kalderası – Süphan Dağı ≈ 60 km ≈ 265 piksel.\r\n" +
+                           "\"Alan ve Çevreyi Hesapla\"ya basın. Resmî alan ≈ 3.755 km²; sonucunuzu karşılaştırın.";
+        }
+        else
+            Results.Text = "Örnek yüklendi. Ölçeği iki noktayla seçin ve gerçek uzunluğu metre olarak yazın.";
     }
 
     private void LoadSample()

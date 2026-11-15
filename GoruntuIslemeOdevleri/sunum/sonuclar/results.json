@@ -3,14 +3,15 @@
     {
       "file": "nut1_two_walnuts_four_hazelnuts.jpg",
       "hazelnut": 1,
-      "walnut": 1,
-      "split": 515.7971038818359,
-      "diameters": [
-        765.2,
-        266.4
+      "walnut": 0,
+      "unseparated": 1,
+      "splitPixels": 53406.25,
+      "pixels": [
+        304780,
+        42725
       ],
       "kinds": [
-        "Ceviz",
+        "Ayr\u0131lamad\u0131",
         "F\u0131nd\u0131k"
       ]
     }
@@ -18,11 +19,23 @@
   "foreground": [
     {
       "file": "p1_higgins.jpg",
+      "background": "bg_acik_gokyuzu.jpg",
       "foregroundRatio": 0.3452
     },
     {
+      "file": "p1_higgins.jpg",
+      "background": "bg_landscape.jpg",
+      "foregroundRatio": 0.3437
+    },
+    {
       "file": "p2_schinazi.jpg",
-      "foregroundRatio": 0.2961
+      "background": "bg_acik_gokyuzu.jpg",
+      "foregroundRatio": 0.296
+    },
+    {
+      "file": "p2_schinazi.jpg",
+      "background": "bg_landscape.jpg",
+      "foregroundRatio": 0.2962
     }
   ],
   "noise": {
@@ -225,8 +238,11 @@
     "threshold": 74,
     "scalePixels": 265.2168923730161,
     "scaleMeters": 60000,
-    "areaKm2": 3630.2985499004835,
-    "perimeterKm": 455.1310416172928,
+    "areaKm2": 3584.4412851862385,
+    "perimeterKm": 398.1646834602004,
+    "contourPerimeterKm": 458.35705458093673,
+    "regionCount": 6,
+    "centerDistancePixels": 26.824892454131007,
     "referenceAreaKm2": 3755
   },
   "threshold": [
@@ -243,6 +259,13 @@
       "threshold": 71,
       "score": 3.2273024436467828,
       "areaRatio": 0.08777427673339844
+    },
+    {
+      "channel": "RGB 3 e\u015Fik (B\u003C92, G\u003C74, R\u003C89)",
+      "inverted": true,
+      "threshold": 85,
+      "score": 3.2259301878339923,
+      "areaRatio": 0.08738136291503906
     },
     {
       "channel": "HSV-V",
@@ -278,6 +301,13 @@
       "threshold": 89,
       "score": 1.295916217496478,
       "areaRatio": 0.012957255045572916
+    },
+    {
+      "channel": "RGB 3 e\u015Fik (B\u003E92, G\u003E74, R\u003E89)",
+      "inverted": false,
+      "threshold": 85,
+      "score": 0.5196505685402995,
+      "areaRatio": 0.8072153727213541
     },
     {
       "channel": "Mavi (B)",
@@ -328,5 +358,13 @@
       "score": -100,
       "areaRatio": 0
     }
-  ]
+  ],
+  "noiseUi": {
+    "kernel": "5\u0027li art\u0131",
+    "operation": "Geni\u015Flet",
+    "iterations": 2,
+    "r": "150-255",
+    "g": "0-90",
+    "b": "0-90"
+  }
 }

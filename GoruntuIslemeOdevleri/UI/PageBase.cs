@@ -1,90 +1,210 @@
 namespace GoruntuIslemeOdevleri.UI;
 
+/// <summary>
+/// Her modül sayfasının iskeleti: üstte yerel araç çubuğu (ToolStrip), ortada girdi | sonuç görüntüleri,
+/// altta sonuç metni, sağda Rehber. Aralarındaki ayırıcılar sürüklenerek boyutlandırılabilir.
+/// </summary>
 internal abstract class PageBase : UserControl
 {
-    protected readonly FlowLayoutPanel Toolbar;
+    protected readonly ToolStrip Toolbar;
     protected readonly ImageDisplay InputView;
     protected readonly ImageDisplay OutputView;
     protected readonly TextBox Results;
+    private readonly GuidePanel _guide;
+    private readonly SplitContainer _guideSplit;
+    private ToolStripButton? _guideButton;
 
     protected PageBase(string inputTitle, string outputTitle)
     {
         Dock = DockStyle.Fill;
-        BackColor = Color.White;
+        BackColor = Theme.Page;
 
-        Toolbar = new FlowLayoutPanel
+        Toolbar = new ToolStrip
         {
             Dock = DockStyle.Top,
-            Height = 76,
-            Padding = new Padding(10, 12, 10, 8),
-            AutoScroll = true,
-            WrapContents = false,
-            BackColor = Color.FromArgb(231, 236, 245)
-        };
-
-        Results = new TextBox
-        {
-            Dock = DockStyle.Bottom,
-            Height = 148,
-            Multiline = true,
-            ReadOnly = true,
-            ScrollBars = ScrollBars.Vertical,
-            BackColor = Color.FromArgb(251, 251, 252),
-            ForeColor = Color.FromArgb(30, 36, 48),
-            Font = new Font("Consolas", 10),
-            BorderStyle = BorderStyle.FixedSingle
+            GripStyle = ToolStripGripStyle.Hidden,
+            Renderer = Theme.Renderer,
+            BackColor = Theme.Panel,
+            ForeColor = Theme.Ink,
+            Padding = new Padding(8, 6, 8, 6),
+            ImageScalingSize = new System.Drawing.Size(16, 16),
+            CanOverflow = true
         };
 
         InputView = new ImageDisplay(inputTitle);
         OutputView = new ImageDisplay(outputTitle);
-        var images = new TableLayoutPanel
+        var imageSplit = Split(Orientation.Vertical, BorderStyle.None);
+        imageSplit.Panel1.Controls.Add(InputView);
+        imageSplit.Panel2.Controls.Add(OutputView);
+        imageSplit.SizeChanged += (_, _) => { if (imageSplit.Width > 100) imageSplit.SplitterDistance = imageSplit.Width / 2; };
+
+        Results = new TextBox
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 1,
-            Padding = new Padding(6)
+            Multiline = true,
+            ReadOnly = true,
+            ScrollBars = ScrollBars.Vertical,
+            BackColor = Theme.Window,
+            ForeColor = Theme.Ink,
+            Font = new Font("Cascadia Mono", 10f),
+            BorderStyle = BorderStyle.None
         };
-        images.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        images.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        images.Controls.Add(InputView, 0, 0);
-        images.Controls.Add(OutputView, 1, 0);
+        if (Results.Font.Name != "Cascadia Mono") Results.Font = new Font("Consolas", 10f);
+        Results.TextChanged += (_, _) =>
+        {
+            string first = Results.Lines.FirstOrDefault(l => !string.IsNullOrWhiteSpace(l)) ?? "";
+            if (first.Length > 0) AppStatus.Report(first.Trim());
+        };
+        var resultsHeader = new Label
+        {
+            Text = "SONUÇLAR",
+            Dock = DockStyle.Top,
+            Height = 26,
+            Font = new Font("Segoe UI", 8.25f, FontStyle.Bold),
+            ForeColor = Theme.Muted,
+            BackColor = Theme.Panel,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Padding = new Padding(10, 0, 0, 0)
+        };
+        var resultsBody = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Window, Padding = new Padding(10, 6, 6, 6) };
+        resultsBody.Controls.Add(Results);
 
-        Controls.Add(images);
-        Controls.Add(Results);
+        var mainSplit = Split(Orientation.Horizontal, BorderStyle.None);
+        mainSplit.Panel1.Controls.Add(imageSplit);
+        mainSplit.Panel2.Controls.Add(resultsBody);
+        mainSplit.Panel2.Controls.Add(resultsHeader);
+        mainSplit.SizeChanged += (_, _) => { if (mainSplit.Height > 300) mainSplit.SplitterDistance = mainSplit.Height - 170; };
+
+        _guide = new GuidePanel { Dock = DockStyle.Fill };
+        _guideSplit = Split(Orientation.Vertical, BorderStyle.None);
+        _guideSplit.FixedPanel = FixedPanel.Panel2;
+        _guideSplit.Panel1.Controls.Add(mainSplit);
+        _guideSplit.Panel2.Controls.Add(_guide);
+        _guideSplit.Panel2Collapsed = true;
+        _guideSplit.SizeChanged += (_, _) => { if (_guideSplit.Width > 700) _guideSplit.SplitterDistance = _guideSplit.Width - 360; };
+
+        Controls.Add(_guideSplit);
         Controls.Add(Toolbar);
     }
 
-    protected Button AddButton(string text, EventHandler click, bool primary = false)
+    private static SplitContainer Split(Orientation orientation, BorderStyle border) => new()
     {
-        var button = new Button
+        Dock = DockStyle.Fill,
+        Orientation = orientation,
+        BorderStyle = border,
+        SplitterWidth = 5,
+        BackColor = Theme.Line,       // ayırıcı çizgi rengi
+        Panel1 = { BackColor = Theme.Page },
+        Panel2 = { BackColor = Theme.Page }
+    };
+
+    /// <summary>Sağdaki rehberi doldurur ve araç çubuğunun sağ ucuna aç/kapa düğmesi koyar.</summary>
+    protected void SetGuide(GuideContent content)
+    {
+        _guide.SetContent(content);
+        _guideSplit.Panel2Collapsed = false;
+        _guideButton = new ToolStripButton("Rehber  (F1)")
         {
-            Text = text,
-            AutoSize = true,
-            Height = 40,
-            Padding = new Padding(12, 0, 12, 0),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = primary ? Color.FromArgb(32, 105, 220) : Color.White,
-            ForeColor = primary ? Color.White : Color.FromArgb(35, 45, 62),
-            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-            Margin = new Padding(5, 0, 5, 0)
+            Alignment = ToolStripItemAlignment.Right,
+            CheckOnClick = true,
+            Checked = true,
+            ForeColor = Theme.Ink,
+            Margin = new Padding(4, 1, 0, 2),
+            Padding = new Padding(6, 0, 6, 0)
         };
-        button.FlatAppearance.BorderColor = primary ? Color.FromArgb(32, 105, 220) : Color.FromArgb(175, 185, 200);
+        _guideButton.Click += (_, _) => _guideSplit.Panel2Collapsed = !_guideButton.Checked;
+        Toolbar.Items.Add(_guideButton);
+        if (Results.TextLength == 0)
+            Results.Text = "Başlamak için sağdaki rehberdeki adımları izleyin.";
+    }
+
+    /// <summary>F1 / Görünüm menüsünden çağrılır.</summary>
+    public void ToggleGuide()
+    {
+        _guideSplit.Panel2Collapsed = !_guideSplit.Panel2Collapsed;
+        if (_guideButton is not null) _guideButton.Checked = !_guideSplit.Panel2Collapsed;
+    }
+
+    protected ToolStripButton AddButton(string text, EventHandler click, bool primary = false)
+    {
+        if (Toolbar.Items.Count > 0 && !(Toolbar.Items[^1] is ToolStripButton or ToolStripDropDownButton))
+            Toolbar.Items.Add(new ToolStripSeparator());
+        var button = new ToolStripButton(text)
+        {
+            Tag = primary ? "primary" : null,
+            Font = primary ? Theme.UiBold : Theme.UiFont,
+            ForeColor = primary ? Color.White : Theme.Ink,
+            Padding = new Padding(primary ? 12 : 6, 3, primary ? 12 : 6, 3),
+            Margin = new Padding(2, 1, 2, 2)
+        };
         button.Click += click;
-        Toolbar.Controls.Add(button);
+        button.Click += (_, _) => AppStatus.Report(text + "…");
+        Toolbar.Items.Add(button);
         return button;
     }
 
-    protected Label AddLabel(string text)
+    /// <summary>
+    /// "Örnek fotoğraflar" açılır menüsü: uygulamanın yanındaki Ornekler/&lt;klasör&gt; içindeki gerçek fotoğraflar
+    /// (dosya adı menüde görünür) ve isteğe bağlı ek öğeler (ör. sentetik örnek).
+    /// </summary>
+    protected ToolStripDropDownButton AddSamples(string folder, Action<string> open, params (string Text, Action Click)[] extras)
     {
-        var label = new Label
+        if (Toolbar.Items.Count > 0 && !(Toolbar.Items[^1] is ToolStripButton or ToolStripDropDownButton))
+            Toolbar.Items.Add(new ToolStripSeparator());
+        var menu = new ToolStripDropDownButton("Örnek fotoğraflar")
         {
-            Text = text,
-            AutoSize = true,
-            Font = new Font("Segoe UI", 9),
-            ForeColor = Color.FromArgb(45, 55, 70),
-            Margin = new Padding(10, 10, 2, 0)
+            ForeColor = Theme.Ink,
+            Padding = new Padding(6, 3, 6, 3),
+            Margin = new Padding(2, 1, 2, 2)
         };
-        Toolbar.Controls.Add(label);
+        menu.DropDown.BackColor = Theme.Surface;
+        string dir = Path.Combine(AppContext.BaseDirectory, "Ornekler", folder);
+        string[] files = Directory.Exists(dir)
+            ? Directory.GetFiles(dir).Where(f => new[] { ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff" }
+                .Contains(Path.GetExtension(f).ToLowerInvariant())).OrderBy(f => f, StringComparer.CurrentCulture).ToArray()
+            : [];
+        foreach (string file in files)
+        {
+            string path = file;
+            var item = new ToolStripMenuItem(Path.GetFileNameWithoutExtension(file)) { ForeColor = Theme.Ink };
+            item.Click += (_, _) =>
+            {
+                try { open(path); AppStatus.Report("Örnek açıldı: " + Path.GetFileName(path)); }
+                catch (Exception ex) { ShowError(ex); }
+            };
+            menu.DropDownItems.Add(item);
+        }
+        if (files.Length == 0)
+            menu.DropDownItems.Add(new ToolStripMenuItem("(Ornekler klasörü bulunamadı)") { Enabled = false });
+        if (extras.Length > 0)
+        {
+            menu.DropDownItems.Add(new ToolStripSeparator());
+            foreach ((string text, Action click) in extras)
+            {
+                var item = new ToolStripMenuItem(text) { ForeColor = Theme.Ink };
+                item.Click += (_, _) => click();
+                menu.DropDownItems.Add(item);
+            }
+        }
+        Toolbar.Items.Add(menu);
+        return menu;
+    }
+
+    /// <summary>Ornekler/&lt;klasör&gt; içindeki ilk fotoğrafın yolu (yoksa null).</summary>
+    protected static string? FirstSample(string folder, string? nameContains = null)
+    {
+        string dir = Path.Combine(AppContext.BaseDirectory, "Ornekler", folder);
+        if (!Directory.Exists(dir)) return null;
+        return Directory.GetFiles(dir).OrderBy(f => f, StringComparer.CurrentCulture)
+            .FirstOrDefault(f => nameContains is null || Path.GetFileName(f).Contains(nameContains, StringComparison.CurrentCultureIgnoreCase));
+    }
+
+    protected ToolStripLabel AddLabel(string text)
+    {
+        if (Toolbar.Items.Count > 0 && Toolbar.Items[^1] is ToolStripButton)
+            Toolbar.Items.Add(new ToolStripSeparator());
+        var label = new ToolStripLabel(text) { ForeColor = Theme.Muted, Margin = new Padding(6, 1, 2, 2) };
+        Toolbar.Items.Add(label);
         return label;
     }
 
@@ -96,11 +216,12 @@ internal abstract class PageBase : UserControl
             Maximum = maximum,
             Value = Math.Clamp(value, minimum, maximum),
             Width = width,
-            Height = 36,
             DecimalPlaces = decimals,
-            Margin = new Padding(2, 5, 4, 0)
+            BackColor = Theme.Surface,
+            ForeColor = Theme.Ink,
+            BorderStyle = BorderStyle.FixedSingle
         };
-        Toolbar.Controls.Add(numeric);
+        Toolbar.Items.Add(new ToolStripControlHost(numeric) { Margin = new Padding(2, 2, 6, 2) });
         return numeric;
     }
 
@@ -110,12 +231,13 @@ internal abstract class PageBase : UserControl
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
             Width = 125,
-            Height = 36,
-            Margin = new Padding(2, 5, 4, 0)
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Theme.Surface,
+            ForeColor = Theme.Ink
         };
         combo.Items.AddRange(items);
         if (items.Length > 0) combo.SelectedIndex = 0;
-        Toolbar.Controls.Add(combo);
+        Toolbar.Items.Add(new ToolStripControlHost(combo) { Margin = new Padding(2, 2, 6, 2) });
         return combo;
     }
 

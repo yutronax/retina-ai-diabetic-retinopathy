@@ -30,6 +30,7 @@ internal static class BatchRunner
         Try("coins", () => RunCoins(Path.Combine(dataDir, "coins"), outDir));
         Try("lake", () => RunLake(dataDir, outDir));
         Try("threshold", () => RunThreshold(dataDir, outDir));
+        Try("noiseUi", () => RunNoiseUiScreenshot(Path.Combine(dataDir, "sipi", "misc"), outDir));
 
         var options = new JsonSerializerOptions { WriteIndented = true };
         File.WriteAllText(Path.Combine(outDir, "results.json"), JsonSerializer.Serialize(results, options));
@@ -49,7 +50,8 @@ internal static class BatchRunner
             Save(outDir, $"nuts_{stem}_mask.png", a.Mask);
             Save(outDir, $"nuts_{stem}_after.jpg", a.Annotated);
             list.Add(new { file = Path.GetFileName(file), hazelnut = a.HazelnutCount, walnut = a.WalnutCount,
-                split = a.SplitDiameter, diameters = a.Items.Select(x => Math.Round(x.DiameterPixels, 1)).ToArray(),
+                unseparated = a.UnseparatedCount, splitPixels = a.SplitDiameter,
+                pixels = a.Items.Select(x => Math.Round(x.Area)).ToArray(),
                 kinds = a.Items.Select(x => x.Kind).ToArray() });
         }
         return list;
@@ -57,20 +59,27 @@ internal static class BatchRunner
 
     private static object RunForeground(string dir, string outDir)
     {
-        string bgPath = Images(dir).First(x => Path.GetFileName(x).StartsWith("bg", StringComparison.OrdinalIgnoreCase));
-        using Mat bg = Load(bgPath);
+        var backgrounds = Images(dir).Where(x => Path.GetFileName(x).StartsWith("bg", StringComparison.OrdinalIgnoreCase)).ToList();
         var list = new List<object>();
-        foreach (string file in Images(dir).Where(x => x != bgPath))
+        foreach (string file in Images(dir).Except(backgrounds))
         {
             using Mat fg = Load(file);
-            (Mat composite, Mat mask) = ForegroundComposer.Compose(fg, bg);
             string stem = Path.GetFileNameWithoutExtension(file);
             Save(outDir, $"fg_{stem}_before.jpg", fg);
-            Save(outDir, $"fg_{stem}_mask.png", mask);
-            Save(outDir, $"fg_{stem}_after.jpg", composite);
-            double ratio = Cv2.CountNonZero(mask) / (double)(mask.Width * mask.Height);
-            composite.Dispose(); mask.Dispose();
-            list.Add(new { file = Path.GetFileName(file), foregroundRatio = Math.Round(ratio, 4) });
+            foreach (string bgPath in backgrounds)
+            {
+                using Mat bgRaw = Load(bgPath);
+                // Uydu görüntüsünün üstündeki yazı şeridi ve alttaki logo kırpılır (%5 üst, %7 alt).
+                int top = bgRaw.Height * 5 / 100, bottom = bgRaw.Height * 7 / 100;
+                using Mat bg = new Mat(bgRaw, new Rect(0, top, bgRaw.Width, bgRaw.Height - top - bottom)).Clone();
+                (Mat composite, Mat mask) = ForegroundComposer.Compose(fg, bg);
+                string bgStem = Path.GetFileNameWithoutExtension(bgPath);
+                Save(outDir, $"fg_{stem}_mask.png", mask);
+                Save(outDir, $"fg_{stem}_{bgStem}_after.jpg", composite);
+                double ratio = Cv2.CountNonZero(mask) / (double)(mask.Width * mask.Height);
+                composite.Dispose(); mask.Dispose();
+                list.Add(new { file = Path.GetFileName(file), background = Path.GetFileName(bgPath), foregroundRatio = Math.Round(ratio, 4) });
+            }
         }
         return list;
     }
@@ -152,9 +161,12 @@ internal static class BatchRunner
         Cv2.Line(annotated, a, b, new Scalar(0, 255, 255), 3, LineTypes.AntiAlias);
         Save(outDir, "lake_before.jpg", src);
         Save(outDir, "lake_mask.png", r.Mask);
+        if (r.ColoredRegions is not null) Save(outDir, "lake_regions.png", r.ColoredRegions);
         Save(outDir, "lake_after.jpg", annotated);
         return new { method = r.ThresholdMethod, threshold = r.Threshold, scalePixels = pixels, scaleMeters = 60_000,
-            areaKm2 = r.AreaSquareMeters / 1e6, perimeterKm = r.PerimeterMeters / 1000, referenceAreaKm2 = 3755 };
+            areaKm2 = r.AreaSquareMeters / 1e6, perimeterKm = r.PerimeterMeters / 1000,
+            contourPerimeterKm = r.ContourPerimeterMeters / 1000, regionCount = r.RegionCount,
+            centerDistancePixels = r.CenterDistancePixels, referenceAreaKm2 = 3755 };
     }
 
     private static object RunThreshold(string dataDir, string outDir)
@@ -167,6 +179,33 @@ internal static class BatchRunner
         Save(outDir, "threshold_worst_mask.png", candidates[^1].Mask);
         foreach (ThresholdCandidate c in candidates) c.Mask.Dispose();
         return rows;
+    }
+
+    /// <summary>
+    /// Ödev 3'ün menüsünü (şablon, işlem, tur, R/G/B aralığı) gerçek arayüzden görüntü olarak kaydeder:
+    /// Peppers'ta yalnız kırmızı pikseller (R 150-255, G 0-90, B 0-90) seçilip 5'li artı ile 2 tur genişletilir.
+    /// </summary>
+    private static object RunNoiseUiScreenshot(string sipiDir, string outDir)
+    {
+        using Mat peppers = Load(Path.Combine(sipiDir, "4.2.07.tiff"));
+        using var form = new Form
+        {
+            Size = new System.Drawing.Size(1500, 860), StartPosition = FormStartPosition.Manual,
+            Location = new System.Drawing.Point(-4000, -4000), ShowInTaskbar = false,
+            Font = new System.Drawing.Font("Segoe UI", 9), BackColor = System.Drawing.Color.White
+        };
+        var page = new UI.NoisePage { Dock = DockStyle.Fill };
+        form.Controls.Add(page);
+        form.Show();
+        Application.DoEvents();
+        int[] ranges = [150, 255, 0, 90, 0, 90];
+        page.Demo(peppers, kernelIndex: 1, operationIndex: 1, iterations: 2, ranges);
+        Application.DoEvents();
+        using var bmp = new System.Drawing.Bitmap(form.ClientSize.Width, form.ClientSize.Height);
+        page.DrawToBitmap(bmp, new System.Drawing.Rectangle(0, 0, page.Width, page.Height));
+        bmp.Save(Path.Combine(outDir, "noise_ui_menu.png"), System.Drawing.Imaging.ImageFormat.Png);
+        form.Close();
+        return new { kernel = "5'li artı", operation = "Genişlet", iterations = 2, r = "150-255", g = "0-90", b = "0-90" };
     }
 
     private static int Segments(Mat binary)

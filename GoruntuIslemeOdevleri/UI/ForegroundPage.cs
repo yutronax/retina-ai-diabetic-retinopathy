@@ -14,11 +14,37 @@ internal sealed class ForegroundPage : PageBase
     {
         AddButton("Ön Plan Aç", (_, _) => LoadForeground());
         AddButton("Arka Plan Aç", (_, _) => LoadBackground());
-        AddButton("Örnekleri Yükle", (_, _) => LoadSample());
+        AddSamples("2-arkaplan", OpenSample, ("Sentetik örnek", LoadSample));
         AddLabel("GrabCut turu");
         _iterations = AddNumber(1, 10, 5, 60);
         AddButton("Arka Planı Değiştir", (_, _) => Compose(), true);
-        LoadSample();
+        SetGuide(Guides.Foreground);
+        if (FirstSample("2-arkaplan", "Kişi 1") is string person && FirstSample("2-arkaplan", "gökyüzü") is string sky)
+        {
+            OpenSample(sky);
+            OpenSample(person);
+        }
+        else LoadSample();
+    }
+
+    /// <summary>"Arka plan - ..." adlı örnekler arka planı, diğerleri ön planı (kişiyi) değiştirir.</summary>
+    private void OpenSample(string path)
+    {
+        Mat loaded = ImageHelpers.LoadColor(path);
+        string name = Path.GetFileNameWithoutExtension(path);
+        if (name.StartsWith("Arka plan", StringComparison.CurrentCultureIgnoreCase))
+        {
+            _background.Dispose();
+            _background = loaded;
+            Results.Text = $"Yeni arka plan: {name}. \"Arka Planı Değiştir\"e basın.";
+        }
+        else
+        {
+            _foreground.Dispose();
+            _foreground = loaded;
+            InputView.SetMat(_foreground);
+            Results.Text = $"Ön plan: {name}. Arka planı da menüden seçip \"Arka Planı Değiştir\"e basın.";
+        }
     }
 
     private void LoadSample()
@@ -57,12 +83,31 @@ internal sealed class ForegroundPage : PageBase
             (Mat composite, Mat mask) = ForegroundComposer.Compose(_foreground, _background, (int)_iterations.Value);
             using (composite)
             using (mask)
-            using (Mat montage = ImageHelpers.MakeMontage([("Ön plan maskesi", mask), ("Sonuç", composite)], 1))
+            using (Mat cutout = CutoutOnChecker(_foreground, mask))
+            using (Mat montage = ImageHelpers.MakeMontage(
+                       [("Kesilen ön plan", cutout), ("Ön plan maskesi", mask), ("Sonuç", composite)], 3))
                 OutputView.SetMat(montage);
             Results.Text = "GrabCut ile ön plan ayrıldı, maske açma-kapama işlemleriyle temizlendi ve yeni arka plana aktarıldı.\r\n" +
                            "Gerçek fotoğrafta nesne görüntü kenarına değerse sonuç zayıflar; daha sonra etkileşimli maske eklenebilir.";
         }
         catch (Exception ex) { ShowError(ex); }
+    }
+
+    /// <summary>Maskeyle kesilen ön planı saydamlığı gösteren damalı zemin üzerinde verir.</summary>
+    private static Mat CutoutOnChecker(Mat foreground, Mat mask)
+    {
+        using Mat bgr = ImageHelpers.EnsureBgr(foreground);
+        var result = new Mat(bgr.Size(), MatType.CV_8UC3);
+        int cell = Math.Max(8, Math.Min(bgr.Width, bgr.Height) / 24);
+        for (int y = 0; y < bgr.Height; y += cell)
+            for (int x = 0; x < bgr.Width; x += cell)
+            {
+                bool light = ((x / cell) + (y / cell)) % 2 == 0;
+                var rect = new OpenCvSharp.Rect(x, y, Math.Min(cell, bgr.Width - x), Math.Min(cell, bgr.Height - y));
+                result[rect].SetTo(light ? new Scalar(235, 235, 235) : new Scalar(200, 200, 200));
+            }
+        bgr.CopyTo(result, mask);
+        return result;
     }
 
     protected override void Dispose(bool disposing)

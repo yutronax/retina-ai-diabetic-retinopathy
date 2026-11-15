@@ -40,6 +40,7 @@ internal static class AutomaticThresholding
             }
         }
 
+        candidates.AddRange(ThreeChannelCandidates(bgr));
         return candidates.OrderByDescending(x => x.Score).ToList();
     }
 
@@ -53,6 +54,75 @@ internal static class AutomaticThresholding
         foreach (ThresholdCandidate candidate in candidates.Skip(1))
             candidate.Mask.Dispose();
         return best;
+    }
+
+    /// <summary>
+    /// Seçilmiş adayın kanal/eşik/kutup bilgisiyle, tek bölgeye indirgenmemiş TAM ikili maskeyi yeniden üretir
+    /// (göl ödevinde tüm bölgeleri renklendirip içlerinden doğru olanı seçmek için).
+    /// </summary>
+    public static Mat FullBinary(Mat source, string channelName, double threshold, bool inverted)
+    {
+        using Mat bgr = ImageHelpers.EnsureBgr(source);
+        var channels = BuildChannels(bgr);
+        Mat? chosen = null;
+        foreach ((string name, Mat channel) in channels)
+        {
+            if (name == channelName) chosen = channel;
+            else channel.Dispose();
+        }
+        if (chosen is null)
+            throw new ArgumentException("Bilinmeyen kanal: " + channelName, nameof(channelName));
+
+        using (chosen)
+        using (var blurred = new Mat())
+        {
+            Cv2.GaussianBlur(chosen, blurred, new Size(5, 5), 0);
+            var binary = new Mat();
+            Cv2.Threshold(blurred, binary, threshold, 255, inverted ? ThresholdTypes.BinaryInv : ThresholdTypes.Binary);
+            using Mat kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(5, 5));
+            Cv2.MorphologyEx(binary, binary, MorphTypes.Open, kernel);
+            Cv2.MorphologyEx(binary, binary, MorphTypes.Close, kernel, iterations: 2);
+            return binary;
+        }
+    }
+
+    /// <summary>
+    /// PDF'teki öneri: tek kanal yerine R, G, B kanallarının her birine ayrı Otsu eşiği uygulayıp
+    /// üç koşulu birlikte (VE) sağlayan pikselleri almak. Koyu ve açık hedef için iki aday döner.
+    /// </summary>
+    private static IEnumerable<ThresholdCandidate> ThreeChannelCandidates(Mat bgr)
+    {
+        Mat[] ch = Cv2.Split(bgr);
+        try
+        {
+            foreach (bool inverted in new[] { true, false })
+            {
+                var combined = new Mat(bgr.Size(), MatType.CV_8UC1, Scalar.All(255));
+                var thresholds = new double[3];
+                for (int i = 0; i < 3; i++)
+                {
+                    using var blurred = new Mat();
+                    using var binary = new Mat();
+                    Cv2.GaussianBlur(ch[i], blurred, new Size(5, 5), 0);
+                    thresholds[i] = Cv2.Threshold(blurred, binary, 0, 255,
+                        (inverted ? ThresholdTypes.BinaryInv : ThresholdTypes.Binary) | ThresholdTypes.Otsu);
+                    Cv2.BitwiseAnd(combined, binary, combined);
+                }
+                using Mat kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(5, 5));
+                Cv2.MorphologyEx(combined, combined, MorphTypes.Open, kernel);
+                Cv2.MorphologyEx(combined, combined, MorphTypes.Close, kernel, iterations: 2);
+                (double score, double areaRatio, double centerDistance, Mat selected) = ScoreAndSelect(combined);
+                combined.Dispose();
+                string name = $"RGB 3 eşik (B<{thresholds[0]:0}, G<{thresholds[1]:0}, R<{thresholds[2]:0})";
+                if (!inverted) name = name.Replace('<', '>');
+                yield return new ThresholdCandidate(name, thresholds.Average(), inverted, score, areaRatio,
+                    centerDistance, selected);
+            }
+        }
+        finally
+        {
+            foreach (Mat m in ch) m.Dispose();
+        }
     }
 
     private static List<(string Name, Mat Channel)> BuildChannels(Mat bgr)

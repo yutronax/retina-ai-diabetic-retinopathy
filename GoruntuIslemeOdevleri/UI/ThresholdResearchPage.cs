@@ -11,10 +11,13 @@ internal sealed class ThresholdResearchPage : PageBase
     public ThresholdResearchPage() : base("Araştırılacak görüntü", "En iyi eşikleme adayları")
     {
         AddButton("Görüntü Aç", (_, _) => LoadImage());
-        AddButton("Göl Örneği", (_, _) => ReplaceSource(SyntheticSamples.Lake()));
-        AddButton("Ceviz-Fındık Örneği", (_, _) => ReplaceSource(SyntheticSamples.Nuts()));
+        AddSamples("5-uydu", path => ReplaceSource(ImageHelpers.LoadColor(path)),
+            ("Ceviz-fındık fotoğrafı", () => { if (FirstSample("1-ceviz", "beyaz zemin") is string p) ReplaceSource(ImageHelpers.LoadColor(p)); }),
+            ("Sentetik göl", () => ReplaceSource(SyntheticSamples.Lake())),
+            ("Sentetik ceviz-fındık", () => ReplaceSource(SyntheticSamples.Nuts())));
         AddButton("Otomatik Eşiği Araştır", (_, _) => Evaluate(), true);
-        ReplaceSource(SyntheticSamples.Lake());
+        SetGuide(Guides.Threshold);
+        ReplaceSource(FirstSample("5-uydu", "Van") is string van ? ImageHelpers.LoadColor(van) : SyntheticSamples.Lake());
     }
 
     private void LoadImage()
