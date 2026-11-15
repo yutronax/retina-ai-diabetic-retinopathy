@@ -1,0 +1,67 @@
+{
+  "dataset_root": "C:\\Users\\kuyus\\OneDrive\\Belgeler\\Masaüstü\\projelerim\\Medikal\\GoruntuIslemeOdevleri\\data\\coins_v2",
+  "class_names": {
+    "0": "1 lira",
+    "1": "10 kurus",
+    "2": "25 kurus",
+    "3": "5 kurus",
+    "4": "50 kurus"
+  },
+  "splits": {
+    "train": {
+      "images": 2409,
+      "labels": 2409,
+      "objects": 23082,
+      "class_counts": {
+        "1 lira": 4887,
+        "10 kurus": 4107,
+        "25 kurus": 6288,
+        "5 kurus": 3462,
+        "50 kurus": 4338
+      },
+      "missing_labels": [],
+      "orphan_labels": [],
+      "empty_labels": 0,
+      "invalid_rows": []
+    },
+    "valid": {
+      "images": 229,
+      "labels": 229,
+      "objects": 2156,
+      "class_counts": {
+        "1 lira": 429,
+        "10 kurus": 393,
+        "25 kurus": 561,
+        "5 kurus": 354,
+        "50 kurus": 419
+      },
+      "missing_labels": [],
+      "orphan_labels": [],
+      "empty_labels": 0,
+      "invalid_rows": []
+    },
+    "test": {
+      "images": 115,
+      "labels": 115,
+      "objects": 1112,
+      "class_counts": {
+        "1 lira": 231,
+        "10 kurus": 202,
+        "25 kurus": 298,
+        "5 kurus": 183,
+        "50 kurus": 198
+      },
+      "missing_labels": [],
+      "orphan_labels": [],
+      "empty_labels": 0,
+      "invalid_rows": []
+    }
+  },
+  "totals": {
+    "images": 2753,
+    "labels": 2753,
+    "objects": 26350,
+    "invalid_rows": 0,
+    "missing_labels": 0
+  }
+}

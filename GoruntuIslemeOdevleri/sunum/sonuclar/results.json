@@ -1,0 +1,332 @@
+{
+  "nuts": [
+    {
+      "file": "nut1_two_walnuts_four_hazelnuts.jpg",
+      "hazelnut": 1,
+      "walnut": 1,
+      "split": 515.7971038818359,
+      "diameters": [
+        765.2,
+        266.4
+      ],
+      "kinds": [
+        "Ceviz",
+        "F\u0131nd\u0131k"
+      ]
+    }
+  ],
+  "foreground": [
+    {
+      "file": "p1_higgins.jpg",
+      "foregroundRatio": 0.3452
+    },
+    {
+      "file": "p2_schinazi.jpg",
+      "foregroundRatio": 0.2961
+    }
+  ],
+  "noise": {
+    "psnr": [
+      {
+        "image": "4.2.07.tiff",
+        "density": 0.02,
+        "noisy": 22.004416312422318,
+        "square9": 27.649872003375954,
+        "cross5": 29.00813556085728,
+        "median": 32.47395235587338
+      },
+      {
+        "image": "4.2.07.tiff",
+        "density": 0.05,
+        "noisy": 18.07798061522878,
+        "square9": 26.83625082355018,
+        "cross5": 28.63780210126839,
+        "median": 32.04817196759204
+      },
+      {
+        "image": "4.2.07.tiff",
+        "density": 0.1,
+        "noisy": 15.181482218551814,
+        "square9": 24.603038563797085,
+        "cross5": 27.658937459747683,
+        "median": 31.206034458352626
+      },
+      {
+        "image": "4.2.07.tiff",
+        "density": 0.15,
+        "noisy": 13.526166956350457,
+        "square9": 21.627379952690728,
+        "cross5": 26.200023438246077,
+        "median": 30.113484321056113
+      },
+      {
+        "image": "4.2.07.tiff",
+        "density": 0.2,
+        "noisy": 12.367814187368003,
+        "square9": 18.55507717978569,
+        "cross5": 24.026378201497664,
+        "median": 28.699707716360507
+      },
+      {
+        "image": "house.tiff",
+        "density": 0.02,
+        "noisy": 22.14457309263753,
+        "square9": 25.27745604807017,
+        "cross5": 26.441264594654967,
+        "median": 30.674827139558726
+      },
+      {
+        "image": "house.tiff",
+        "density": 0.05,
+        "noisy": 18.21931010777895,
+        "square9": 24.60502073824722,
+        "cross5": 26.051826087902107,
+        "median": 30.161692267448146
+      },
+      {
+        "image": "house.tiff",
+        "density": 0.1,
+        "noisy": 15.33157010000741,
+        "square9": 22.46702109362164,
+        "cross5": 25.14582360626159,
+        "median": 29.23902476182571
+      },
+      {
+        "image": "house.tiff",
+        "density": 0.15,
+        "noisy": 13.677766903054673,
+        "square9": 19.547804118233273,
+        "cross5": 23.731945805079874,
+        "median": 28.134120377322756
+      },
+      {
+        "image": "house.tiff",
+        "density": 0.2,
+        "noisy": 12.527010645189547,
+        "square9": 16.358073726244935,
+        "cross5": 21.64433730803865,
+        "median": 26.899705383008374
+      },
+      {
+        "image": "5.2.09.tiff",
+        "density": 0.02,
+        "noisy": 21.974015233865035,
+        "square9": 23.95390335657121,
+        "cross5": 26.033493742790036,
+        "median": 28.31401906692403
+      },
+      {
+        "image": "5.2.09.tiff",
+        "density": 0.05,
+        "noisy": 18.07476933973082,
+        "square9": 23.148219831761082,
+        "cross5": 25.56585798610549,
+        "median": 27.934769087423497
+      },
+      {
+        "image": "5.2.09.tiff",
+        "density": 0.1,
+        "noisy": 15.21189909289921,
+        "square9": 20.91887364253205,
+        "cross5": 24.426192681415635,
+        "median": 27.327411342726684
+      },
+      {
+        "image": "5.2.09.tiff",
+        "density": 0.15,
+        "noisy": 13.547059416421622,
+        "square9": 18.000185711794682,
+        "cross5": 22.81866792093044,
+        "median": 26.602127206580622
+      },
+      {
+        "image": "5.2.09.tiff",
+        "density": 0.2,
+        "noisy": 12.40416612425545,
+        "square9": 15.015633353747047,
+        "cross5": 20.68848593465921,
+        "median": 25.680029930773117
+      }
+    ],
+    "edges": [
+      {
+        "image": "4.2.07.tiff",
+        "segmentsBefore": 205,
+        "segmentsSquare9": 24,
+        "segmentsCross5": 35
+      },
+      {
+        "image": "house.tiff",
+        "segmentsBefore": 547,
+        "segmentsSquare9": 27,
+        "segmentsCross5": 54
+      },
+      {
+        "image": "5.2.09.tiff",
+        "segmentsBefore": 1254,
+        "segmentsSquare9": 114,
+        "segmentsCross5": 180
+      }
+    ]
+  },
+  "coins": [
+    {
+      "file": "coin1.jpg",
+      "total": 0,
+      "tl1": 0,
+      "kr50": 0,
+      "kr25": 0
+    },
+    {
+      "file": "coin2.jpg",
+      "total": 1,
+      "tl1": 1,
+      "kr50": 0,
+      "kr25": 0
+    },
+    {
+      "file": "coin3.jpg",
+      "total": 0,
+      "tl1": 0,
+      "kr50": 0,
+      "kr25": 0
+    },
+    {
+      "file": "coin4.jpg",
+      "total": 0,
+      "tl1": 0,
+      "kr50": 0,
+      "kr25": 0
+    },
+    {
+      "file": "coin5.jpg",
+      "total": 0,
+      "tl1": 0,
+      "kr50": 0,
+      "kr25": 0
+    },
+    {
+      "file": "coin6.jpg",
+      "total": 1,
+      "tl1": 1,
+      "kr50": 0,
+      "kr25": 0
+    },
+    {
+      "file": "coin7.jpg",
+      "total": 1,
+      "tl1": 1,
+      "kr50": 0,
+      "kr25": 0
+    }
+  ],
+  "lake": {
+    "method": "Ye\u015Fil (G) (ters)",
+    "threshold": 74,
+    "scalePixels": 265.2168923730161,
+    "scaleMeters": 60000,
+    "areaKm2": 3630.2985499004835,
+    "perimeterKm": 455.1310416172928,
+    "referenceAreaKm2": 3755
+  },
+  "threshold": [
+    {
+      "channel": "Ye\u015Fil (G)",
+      "inverted": true,
+      "threshold": 74,
+      "score": 3.229616996542364,
+      "areaRatio": 0.0879376729329427
+    },
+    {
+      "channel": "Gri",
+      "inverted": true,
+      "threshold": 71,
+      "score": 3.2273024436467828,
+      "areaRatio": 0.08777427673339844
+    },
+    {
+      "channel": "HSV-V",
+      "inverted": true,
+      "threshold": 85,
+      "score": 3.224499856490015,
+      "areaRatio": 0.0873565673828125
+    },
+    {
+      "channel": "HSV-S",
+      "inverted": false,
+      "threshold": 96,
+      "score": 3.0677752508038725,
+      "areaRatio": 0.11228624979654948
+    },
+    {
+      "channel": "Mavi (B)",
+      "inverted": true,
+      "threshold": 92,
+      "score": 2.147145481284693,
+      "areaRatio": 0.004233042399088542
+    },
+    {
+      "channel": "HSV-H",
+      "inverted": false,
+      "threshold": 92,
+      "score": 1.8201634119295589,
+      "areaRatio": 0.00478363037109375
+    },
+    {
+      "channel": "K\u0131rm\u0131z\u0131 (R)",
+      "inverted": true,
+      "threshold": 89,
+      "score": 1.295916217496478,
+      "areaRatio": 0.012957255045572916
+    },
+    {
+      "channel": "Mavi (B)",
+      "inverted": false,
+      "threshold": 92,
+      "score": -0.5124403937631508,
+      "areaRatio": 0.0039997100830078125
+    },
+    {
+      "channel": "K\u0131rm\u0131z\u0131 (R)",
+      "inverted": false,
+      "threshold": 89,
+      "score": -0.5191086521058446,
+      "areaRatio": 0.0049571990966796875
+    },
+    {
+      "channel": "Gri",
+      "inverted": false,
+      "threshold": 71,
+      "score": -100,
+      "areaRatio": 0
+    },
+    {
+      "channel": "Ye\u015Fil (G)",
+      "inverted": false,
+      "threshold": 74,
+      "score": -100,
+      "areaRatio": 0
+    },
+    {
+      "channel": "HSV-H",
+      "inverted": true,
+      "threshold": 92,
+      "score": -100,
+      "areaRatio": 0
+    },
+    {
+      "channel": "HSV-S",
+      "inverted": true,
+      "threshold": 96,
+      "score": -100,
+      "areaRatio": 0
+    },
+    {
+      "channel": "HSV-V",
+      "inverted": false,
+      "threshold": 85,
+      "score": -100,
+      "areaRatio": 0
+    }
+  ]
+}

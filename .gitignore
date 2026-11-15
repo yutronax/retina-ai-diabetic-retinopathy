@@ -11,3 +11,20 @@ outputs/
 
 .DS_Store
 Thumbs.db
+
+# C# / Visual Studio
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+# Local ML environments, downloaded datasets and training artifacts
+GoruntuIslemeOdevleri/.venv-yolo/
+GoruntuIslemeOdevleri/data/
+GoruntuIslemeOdevleri/training/runs/
+GoruntuIslemeOdevleri/training/predictions/
+# Regenerable batch outputs (keep results.json for charts)
+GoruntuIslemeOdevleri/sunum/sonuclar/*
+GoruntuIslemeOdevleri/sunum/sonuclar_once/*
+!GoruntuIslemeOdevleri/sunum/sonuclar/results.json
+!GoruntuIslemeOdevleri/sunum/sonuclar_once/results.json
