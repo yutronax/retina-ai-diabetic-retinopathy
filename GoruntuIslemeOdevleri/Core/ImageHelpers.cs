@@ -60,14 +60,17 @@ internal static class ImageHelpers
             return new Mat(cellHeight, cellWidth, MatType.CV_8UC3, new Scalar(255, 255, 255));
 
         int rows = (int)Math.Ceiling(list.Count / (double)columns);
+        // Başlık boyutu kare genişliğiyle ölçeklenir (520 px karede 13 px); büyük karede yazı okunur kalır.
+        float titlePx = Math.Max(13f, cellWidth / 40f);
+        int header = (int)(titlePx * 2.9f);
         var canvas = new Mat(rows * cellHeight, columns * cellWidth, MatType.CV_8UC3, new Scalar(245, 245, 245));
 
         for (int i = 0; i < list.Count; i++)
         {
             int x = (i % columns) * cellWidth;
             int y = (i / columns) * cellHeight;
-            int imageTop = y + 38;
-            int availableHeight = cellHeight - 48;
+            int imageTop = y + header;
+            int availableHeight = cellHeight - header - 10;
 
             using Mat bgr = EnsureBgr(list[i].Image);
             double scale = Math.Min((cellWidth - 20) / (double)bgr.Width, availableHeight / (double)bgr.Height);
@@ -85,12 +88,12 @@ internal static class ImageHelpers
         // Başlıklar GDI+ ile yazılır: OpenCV'nin Hershey fontu Türkçe karakterleri (Ö, ç, ş...) çizemez.
         using Bitmap bitmap = ToBitmap(canvas);
         using (Graphics g = Graphics.FromImage(bitmap))
-        using (var font = new Font("Segoe UI", 13, FontStyle.Bold, GraphicsUnit.Pixel))
+        using (var font = new Font("Segoe UI", titlePx, FontStyle.Bold, GraphicsUnit.Pixel))
         using (var brush = new SolidBrush(Color.FromArgb(30, 30, 30)))
         {
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
             for (int i = 0; i < list.Count; i++)
-                g.DrawString(list[i].Title, font, brush, (i % columns) * cellWidth + 12, (i / columns) * cellHeight + 10);
+                g.DrawString(list[i].Title, font, brush, (i % columns) * cellWidth + 12, (i / columns) * cellHeight + titlePx * 0.75f);
         }
         canvas.Dispose();
         return FromBitmap(bitmap);

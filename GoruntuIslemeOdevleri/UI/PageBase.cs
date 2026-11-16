@@ -216,7 +216,7 @@ internal abstract class PageBase : UserControl
     {
         if (view.SelectedIndex == 0 && steps.Count > 0)
         {
-            using OpenCvSharp.Mat montage = Core.ImageHelpers.MakeMontage(steps, Math.Min(4, steps.Count), 480, 380);
+            using OpenCvSharp.Mat montage = Core.ImageHelpers.MakeMontage(steps, Math.Min(4, steps.Count), 960, 720);
             OutputView.SetMat(montage);
         }
         else
