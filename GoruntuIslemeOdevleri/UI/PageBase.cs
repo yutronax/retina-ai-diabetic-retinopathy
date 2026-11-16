@@ -199,6 +199,32 @@ internal abstract class PageBase : UserControl
             .FirstOrDefault(f => nameContains is null || Path.GetFileName(f).Contains(nameContains, StringComparison.CurrentCultureIgnoreCase));
     }
 
+    /// <summary>Araç çubuğuna "Görünüm: Adım adım / Yalnız sonuç" seçimini ekler.</summary>
+    protected ComboBox AddStepView()
+    {
+        AddLabel("Görünüm");
+        ComboBox combo = AddCombo("Adım adım", "Yalnız sonuç");
+        combo.Width = 115;
+        return combo;
+    }
+
+    /// <summary>
+    /// Sağ panelde ya bütün ara adımları başlıklarıyla bir kolajda (4 sütun) ya da yalnız sonucu gösterir.
+    /// Adım başlıkları sonuç metninin sonuna da yazılır.
+    /// </summary>
+    protected void ShowSteps(ComboBox view, IReadOnlyList<(string Title, OpenCvSharp.Mat Image)> steps, OpenCvSharp.Mat result)
+    {
+        if (view.SelectedIndex == 0 && steps.Count > 0)
+        {
+            using OpenCvSharp.Mat montage = Core.ImageHelpers.MakeMontage(steps, Math.Min(4, steps.Count), 480, 380);
+            OutputView.SetMat(montage);
+        }
+        else
+            OutputView.SetMat(result);
+        if (steps.Count > 0)
+            Results.AppendText("\r\n\r\nADIMLAR\r\n" + string.Join("\r\n", steps.Select(s => "  " + s.Title)));
+    }
+
     protected ToolStripLabel AddLabel(string text)
     {
         if (Toolbar.Items.Count > 0 && Toolbar.Items[^1] is ToolStripButton)

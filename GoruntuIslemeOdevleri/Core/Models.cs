@@ -53,11 +53,14 @@ internal sealed record CoinAnalysis(Mat Annotated, Mat Mask, IReadOnlyList<CoinI
     public double TotalLira => Items.Sum(x => x.Value);
     public int HeadsCount => Items.Count(x => x.Face.StartsWith("Yazı", StringComparison.OrdinalIgnoreCase));
     public int TailsCount => Items.Count(x => x.Face.StartsWith("Tura", StringComparison.OrdinalIgnoreCase));
+    /// <summary>İşlemin ara adımları (başlık + görüntü), sırasıyla; arayüzde adım adım gösterilir.</summary>
+    public IReadOnlyList<(string Title, Mat Image)> Steps { get; init; } = [];
 
     public void Dispose()
     {
         Annotated.Dispose();
         Mask.Dispose();
+        foreach (var step in Steps) step.Image.Dispose();
     }
 }
 
@@ -70,11 +73,14 @@ internal sealed record LakeAnalysis(Mat Annotated, Mat Mask, string ThresholdMet
     /// <summary>Karşılaştırma için kontur uzunluğundan hesaplanan çevre.</summary>
     public double ContourPerimeterMeters { get; init; }
     public double CenterDistancePixels { get; init; }
+    /// <summary>İşlemin ara adımları (başlık + görüntü), sırasıyla; arayüzde adım adım gösterilir.</summary>
+    public IReadOnlyList<(string Title, Mat Image)> Steps { get; init; } = [];
 
     public void Dispose()
     {
         Annotated.Dispose();
         Mask.Dispose();
         ColoredRegions?.Dispose();
+        foreach (var step in Steps) step.Image.Dispose();
     }
 }

@@ -60,7 +60,8 @@ internal static class AutomaticThresholding
     /// Seçilmiş adayın kanal/eşik/kutup bilgisiyle, tek bölgeye indirgenmemiş TAM ikili maskeyi yeniden üretir
     /// (göl ödevinde tüm bölgeleri renklendirip içlerinden doğru olanı seçmek için).
     /// </summary>
-    public static Mat FullBinary(Mat source, string channelName, double threshold, bool inverted)
+    public static Mat FullBinary(Mat source, string channelName, double threshold, bool inverted,
+        List<(string Title, Mat Image)>? steps = null)
     {
         using Mat bgr = ImageHelpers.EnsureBgr(source);
         var channels = BuildChannels(bgr);
@@ -79,9 +80,12 @@ internal static class AutomaticThresholding
             Cv2.GaussianBlur(chosen, blurred, new Size(5, 5), 0);
             var binary = new Mat();
             Cv2.Threshold(blurred, binary, threshold, 255, inverted ? ThresholdTypes.BinaryInv : ThresholdTypes.Binary);
+            steps?.Add(($"1. Tek kanal: {channelName}", chosen.Clone()));
+            steps?.Add(($"2. Eşikleme (T={threshold:0}{(inverted ? ", ters" : "")})", binary.Clone()));
             using Mat kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(5, 5));
             Cv2.MorphologyEx(binary, binary, MorphTypes.Open, kernel);
             Cv2.MorphologyEx(binary, binary, MorphTypes.Close, kernel, iterations: 2);
+            steps?.Add(("3. Gürültü temizliği (açma + kapama)", binary.Clone()));
             return binary;
         }
     }

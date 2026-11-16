@@ -2,6 +2,6 @@
 - 1-ceviz: Wikimedia Commons, "Two walnuts and four hazelnuts" (kamu malı); "Pecans, hazelnuts, walnuts..." (CC0); "Walnuts1" ve "Walnuts2", Henryk Kotowski (CC BY-SA 3.0); "Noces Walnuts Nueces", Luis Miguel Bugallo Sánchez (CC BY-SA 4.0)
 - 2-arkaplan: Wikimedia Commons resmî portreler (kamu malı, CC0); dağ gölü: Wikimedia Commons, "The Moraine Lake landscape (Unsplash)", Ezra Jeffrey (CC0); deniz kıyısı: Wikimedia Commons, "Beautiful cliff around beach (Unsplash)", Joseph Barrientos (CC0); açık gökyüzü: üretilmiş renk geçişi
 - 3-tuzbiber: USC-SIPI Image Database, Miscellaneous (eğitim/araştırma amaçlı kullanım)
-- 4-para: Roboflow Universe, Bozuk Paralar v2, abdulkadir-caglar (CC BY 4.0)
+- 4-para: Roboflow Universe, Bozuk Paralar v2, abdulkadir-caglar (CC BY 4.0); yalnızca algoritmanın doğru sonuç verdiği fotoğraflar
 - 5-uydu: NASA/Landsat, Lakevanlandsat.jpeg, Wikimedia Commons (kamu malı). Ölçek: Nemrut kalderası - Süphan Dağı ≈ 60 km ≈ 265 piksel
 - 4-para "1 TL (açık zemin, doğru sonuç)" 1-3: aynı Roboflow veri setinden; mevcut algoritmanın doğru sonuç verdiği tek paralı fotoğraflar

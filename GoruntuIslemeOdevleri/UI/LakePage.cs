@@ -9,6 +9,7 @@ internal sealed class LakePage : PageBase
     private Mat _source = new();
     private readonly NumericUpDown _realMeters;
     private readonly NumericUpDown _pixelLength;
+    private readonly ComboBox _view;
     private readonly List<Point> _scalePoints = [];
     private bool _selectingScale;
 
@@ -22,6 +23,7 @@ internal sealed class LakePage : PageBase
         _pixelLength = AddNumber(1, 100_000, 150, 85, 1);
         AddButton("Ölçeği 2 Noktayla Seç", (_, _) => StartScaleSelection());
         AddButton("Alan ve Çevreyi Hesapla", (_, _) => Analyze(), true);
+        _view = AddStepView();
         SetGuide(Guides.Lake);
         InputView.ImagePixelClicked += InputViewOnImagePixelClicked;
         if (FirstSample("5-uydu", "Van") is string van) OpenSample(van); else LoadSample();
@@ -104,14 +106,13 @@ internal sealed class LakePage : PageBase
         try
         {
             using LakeAnalysis analysis = LakeAnalyzer.Analyze(_source, (double)_realMeters.Value, (double)_pixelLength.Value);
-            using Mat montage = ImageHelpers.MakeMontage([("Seçilen maske", analysis.Mask), ("Ölçüm", analysis.Annotated)], 1);
-            OutputView.SetMat(montage);
             double metersPerPixel = (double)_realMeters.Value / (double)_pixelLength.Value;
             Results.Text = $"Otomatik eşikleme : {analysis.ThresholdMethod}, eşik={analysis.Threshold:0.0}\r\n" +
                            $"Ölçek             : {metersPerPixel:0.000} m/piksel\r\n" +
                            $"Alan              : {analysis.AreaSquareMeters:0} m² = {analysis.AreaSquareMeters / 1_000_000.0:0.000} km²\r\n" +
                            $"Çevre             : {analysis.PerimeterMeters:0} m = {analysis.PerimeterMeters / 1000.0:0.000} km\r\n" +
                            $"Ağırlık merkezi   : ({analysis.Centroid.X:0.0}, {analysis.Centroid.Y:0.0})";
+            ShowSteps(_view, analysis.Steps, analysis.Annotated);
         }
         catch (Exception ex) { ShowError(ex); }
     }

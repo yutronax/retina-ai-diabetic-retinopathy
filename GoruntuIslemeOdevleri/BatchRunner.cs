@@ -170,6 +170,7 @@ internal static class BatchRunner
         Save(outDir, "lake_before.jpg", src);
         Save(outDir, "lake_mask.png", r.Mask);
         if (r.ColoredRegions is not null) Save(outDir, "lake_regions.png", r.ColoredRegions);
+        using (Mat stepsMontage = ImageHelpers.MakeMontage(r.Steps, 4, 480, 380)) Save(outDir, "lake_steps.png", stepsMontage);
         Save(outDir, "lake_after.jpg", annotated);
         return new { method = r.ThresholdMethod, threshold = r.Threshold, scalePixels = pixels, scaleMeters = 60_000,
             areaKm2 = r.AreaSquareMeters / 1e6, perimeterKm = r.PerimeterMeters / 1000,

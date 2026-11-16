@@ -83,6 +83,7 @@ internal static class CoinEvaluation
             File.WriteAllBytes(Path.Combine(outDir, $"sentetik_{name}.png"), bytes);
             Cv2.ImEncode(".png", a.Mask, out bytes);
             File.WriteAllBytes(Path.Combine(outDir, $"sentetik_{name}_bolgeler.png"), bytes);
+            using (Mat m = ImageHelpers.MakeMontage(a.Steps, 4, 480, 380)) { Cv2.ImEncode(".png", m, out bytes); File.WriteAllBytes(Path.Combine(outDir, $"sentetik_{name}_adimlar.png"), bytes); }
         }
         File.WriteAllLines(Path.Combine(outDir, "sentetik.txt"), lines);
         return 0;

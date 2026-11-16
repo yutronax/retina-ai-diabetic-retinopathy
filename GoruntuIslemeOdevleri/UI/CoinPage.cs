@@ -9,6 +9,7 @@ internal sealed class CoinPage : PageBase
     private Mat _source = new();
     private Mat _headsReference = new();
     private Mat _tailsReference = new();
+    private readonly ComboBox _view;
 
     public CoinPage() : base("Bozuk para görüntüsü", "Değer ve yazı-tura sonucu")
     {
@@ -17,6 +18,7 @@ internal sealed class CoinPage : PageBase
         AddButton("Tura Referansı", (_, _) => LoadReference(false));
         AddSamples("4-para", OpenSample, ("Sentetik örnek (beyaz zemin, yazı/tura referanslı)", LoadSample));
         AddButton("Paraları Analiz Et", (_, _) => Analyze(), true);
+        _view = AddStepView();
         SetGuide(Guides.Coins);
         LoadSample();
     }
@@ -78,12 +80,12 @@ internal sealed class CoinPage : PageBase
             Mat? heads = _headsReference.Empty() ? null : _headsReference;
             Mat? tails = _tailsReference.Empty() ? null : _tailsReference;
             using CoinAnalysis analysis = CoinAnalyzer.Analyze(_source, heads, tails);
-            OutputView.SetMat(analysis.Annotated);
             Results.Text = $"Para adedi : {analysis.Items.Count}\r\n" +
                            $"Toplam     : {analysis.TotalLira:0.00} TL\r\n" +
                            $"Yazı/Tura  : {analysis.HeadsCount}/{analysis.TailsCount}\r\n\r\n" +
                            string.Join("\r\n", analysis.Items.Select((x, i) =>
                                $"{i + 1,2}. {x.Value:0.00} TL  {x.Face,-8} çap={x.DiameterPixels,6:0.0}px  fark={x.FaceConfidence:0.000}"));
+            ShowSteps(_view, analysis.Steps, analysis.Annotated);
         }
         catch (Exception ex) { ShowError(ex); }
     }

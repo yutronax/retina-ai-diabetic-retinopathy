@@ -19,7 +19,8 @@ internal static class LakeAnalyzer
         IReadOnlyList<ThresholdCandidate> candidates = AutomaticThresholding.Evaluate(source);
         ThresholdCandidate best = candidates.First(c => !c.Name.StartsWith("RGB", StringComparison.Ordinal));
         foreach (ThresholdCandidate c in candidates) c.Mask.Dispose();
-        using Mat binary = AutomaticThresholding.FullBinary(source, best.Name, best.Threshold, best.Inverted);
+        var steps = new List<(string Title, Mat Image)> { ("0. Uydu görüntüsü", ImageHelpers.EnsureBgr(source)) };
+        using Mat binary = AutomaticThresholding.FullBinary(source, best.Name, best.Threshold, best.Inverted, steps);
 
         // 2) Bölgeleri etiketle ve her birini farklı renge boya.
         using var labels = new Mat();
@@ -54,9 +55,19 @@ internal static class LakeAnalyzer
             throw new InvalidOperationException("Göl/arazi alanı tespit edilemedi.");
         }
 
+        // Adım görüntüsü: boyalı bölgeler + her bölgenin ağırlık merkezi (sarı) + resmin ortası (beyaz +)
+        Mat regionsStep = colored.Clone();
+        for (int label = 1; label < count; label++)
+            if (stats.At<int>(label, (int)ConnectedComponentsTypes.Area) >= minArea)
+                Cv2.Circle(regionsStep, new Point((int)centroids.At<double>(label, 0), (int)centroids.At<double>(label, 1)),
+                    7, new Scalar(0, 255, 255), -1, LineTypes.AntiAlias);
+        Cv2.DrawMarker(regionsStep, new Point((int)center.X, (int)center.Y), Scalar.All(255), MarkerTypes.Cross, 30, 3);
+        steps.Add(($"4. Bölgeleri boyama: {regionCount} bölge, ağırlık merkezleri", regionsStep));
+
         var lakeMask = new Mat();
         Cv2.Compare(labels, Scalar.All(lakeLabel), lakeMask, CmpTypes.EQ);
         FillHoles(lakeMask);   // göl içindeki adacıklar gölün alanına dahil
+        steps.Add(($"5. Göl = merkeze en yakın bölge ({bestDistance:0} px)", lakeMask.Clone()));
 
         // 4) Alan = aynı renkli piksel sayısı × (m/piksel)².
         double metersPerPixel = realScaleMeters / scalePixels;
@@ -71,6 +82,12 @@ internal static class LakeAnalyzer
         Cv2.Subtract(dilated, lakeMask, edge);
         double edgePixels = Cv2.CountNonZero(edge);
         double perimeterMeters = edgePixels * metersPerPixel;
+        using (Mat k = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(5, 5)))
+        {
+            var edgeStep = new Mat();
+            Cv2.Dilate(edge, edgeStep, k);   // tek piksellik kenar küçük önizlemede görünsün diye kalınlaştırıldı
+            steps.Add(($"6. Kenar = genişlet − orijinal ({edgePixels:0} piksel)", edgeStep));
+        }
 
         // Karşılaştırma için kontur uzunluğu (alt-piksel, çaprazları √2 sayar).
         Cv2.FindContours(lakeMask.Clone(), out Point[][] contours, out _, RetrievalModes.External,
@@ -91,13 +108,16 @@ internal static class LakeAnalyzer
         Cv2.PutText(annotated, $"Cevre: {perimeterMeters / 1000.0:0.00} km",
             new Point(18, 76), HersheyFonts.HersheySimplex, 0.82, new Scalar(255, 255, 255), 3, LineTypes.AntiAlias);
 
+        steps.Add(($"7. Sonuç: {areaSquareMeters / 1e6:0} km², {perimeterMeters / 1000:0} km", annotated.Clone()));
+
         return new LakeAnalysis(annotated, lakeMask, best.Name + (best.Inverted ? " (ters)" : ""),
             best.Threshold, areaSquareMeters, perimeterMeters, centroid)
         {
             ColoredRegions = colored,
             RegionCount = regionCount,
             ContourPerimeterMeters = contourPerimeterMeters,
-            CenterDistancePixels = bestDistance
+            CenterDistancePixels = bestDistance,
+            Steps = steps
         };
     }
 

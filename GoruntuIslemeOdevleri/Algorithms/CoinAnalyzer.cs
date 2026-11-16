@@ -32,8 +32,10 @@ internal static class CoinAnalyzer
         using var gray = new Mat();
         Cv2.CvtColor(bgr, gray, ColorConversionCodes.BGR2GRAY);
 
+        var steps = new List<(string Title, Mat Image)> { ("0. Girdi", bgr.Clone()) };
+
         // ---- a-1) Paraları kâğıttan ayır: beyaz kâğıt hem parlak hem renksizdir ----
-        using Mat mask = ForegroundMask(bgr, gray);
+        using Mat mask = ForegroundMask(bgr, gray, steps);
 
         // ---- a-2) Alan bulma: her bağlı bölge bir para adayı ----
         using var labels = new Mat();
@@ -77,23 +79,37 @@ internal static class CoinAnalyzer
         // ---- b) Kenar deseni histogramı → yazı / tura ----
         foreach (Coin c in coins)
             c.Histogram = EdgeHistogram(gray, labels, c);
+        steps.Add(("6. Kenar desenleri (Canny) → histogram", EdgeStep(gray, coins)));
         AssignFaces(coins, headsReference, tailsReference);
 
         // ---- Çıktı görüntüleri ----
         Mat colored = ColorRegions(labels, coins, bgr.Size());
+        Mat diameterStep = colored.Clone();
+        foreach (Coin c in coins)
+        {
+            // En küçük / en büyük x ve y: çapın ölçüldüğü kutu
+            Cv2.Rectangle(diameterStep, c.Box, Scalar.All(255), 3);
+            Cv2.PutText(diameterStep, $"{c.Diameter:0}px={c.Millimeters:0.0}mm", new Point(c.Box.Left, Math.Max(18, c.Box.Top - 8)),
+                HersheyFonts.HersheySimplex, 0.6, Scalar.All(255), 2, LineTypes.AntiAlias);
+        }
+        steps.Insert(steps.FindIndex(x => x.Title.StartsWith("6.")),
+            ($"5. Bölgeleri boyama + çap (min/max), ölçek {pixelsPerMm:0.0} px/mm", diameterStep));
         Mat annotated = Annotate(bgr, colored, coins, pixelsPerMm);
+        steps.Add(($"7. Sonuç: {coins.Count} para, {coins.Sum(c => c.Value):0.00} TL", annotated.Clone()));
         var items = coins.OrderBy(c => c.Center.Y).ThenBy(c => c.Center.X)
             .Select(c => new CoinItem(c.Value, c.Face, c.Diameter, c.Center, c.FaceDistance)).ToList();
-        return new CoinAnalysis(annotated, colored, items);
+        return new CoinAnalysis(annotated, colored, items) { Steps = steps };
     }
 
     /// <summary>Beyaz kâğıt = parlak (V yüksek) ve renksiz (S düşük). Para bunun dışında kalan bölgedir.</summary>
-    private static Mat ForegroundMask(Mat bgr, Mat gray)
+    private static Mat ForegroundMask(Mat bgr, Mat gray, List<(string Title, Mat Image)>? steps = null)
     {
         using var blurred = new Mat();
         Cv2.GaussianBlur(gray, blurred, new Size(5, 5), 0);
         var mask = new Mat();
-        Cv2.Threshold(blurred, mask, 0, 255, ThresholdTypes.BinaryInv | ThresholdTypes.Otsu);
+        double grayT = Cv2.Threshold(blurred, mask, 0, 255, ThresholdTypes.BinaryInv | ThresholdTypes.Otsu);
+        steps?.Add(("1. Gri ton", gray.Clone()));
+        steps?.Add(($"2. Gri, ters Otsu (T={grayT:0})", mask.Clone()));
 
         // Pirinç/sarı kısımlar griye göre kâğıda yakın kalabilir; doygunluk onları geri kazandırır.
         using (var hsv = new Mat())
@@ -102,7 +118,8 @@ internal static class CoinAnalyzer
             Cv2.CvtColor(bgr, hsv, ColorConversionCodes.BGR2HSV);
             using Mat s = Cv2.Split(hsv)[1];
             Cv2.GaussianBlur(s, s, new Size(5, 5), 0);
-            Cv2.Threshold(s, satMask, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
+            double satT = Cv2.Threshold(s, satMask, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
+            steps?.Add(($"3. Doygunluk (HSV-S), Otsu (T={satT:0})", satMask.Clone()));
             Cv2.BitwiseOr(mask, satMask, mask);
         }
 
@@ -111,6 +128,7 @@ internal static class CoinAnalyzer
         Cv2.MorphologyEx(mask, mask, MorphTypes.Open, open);
         Cv2.MorphologyEx(mask, mask, MorphTypes.Close, close, iterations: 2);
         FillHoles(mask);
+        steps?.Add(("4. Birleştir + açma/kapama + delik doldurma", mask.Clone()));
         // Ödev paraların kâğıt üzerinde ayrık durduğunu varsayar; birbirine değen paralar tek bölge olur ve
         // elips/doluluk kontrolünde elenir. (Mesafe dönüşümüyle ayırma, eğik çekilmiş tek parayı ikiye bölüyordu.)
         return mask;
@@ -184,6 +202,23 @@ internal static class CoinAnalyzer
         for (int i = 0; i < RingCount; i++) hist[i] /= Math.Max(1e-9, ringSum);
         for (int i = RingCount; i < hist.Length; i++) hist[i] /= Math.Max(1, edgeCount);
         return hist;
+    }
+
+    /// <summary>Adım görüntüsü: yalnız para bölgelerinin içindeki Canny kenarları.</summary>
+    private static Mat EdgeStep(Mat gray, List<Coin> coins)
+    {
+        var result = new Mat(gray.Size(), MatType.CV_8UC1, Scalar.All(0));
+        foreach (Coin c in coins)
+        {
+            using var roi = new Mat(gray, c.Box);
+            using var eq = new Mat();
+            Cv2.EqualizeHist(roi, eq);
+            using var edges = new Mat();
+            Cv2.Canny(eq, edges, 60, 160);
+            using var target = new Mat(result, c.Box);
+            edges.CopyTo(target);
+        }
+        return result;
     }
 
     /// <summary>Ki-kare uzaklığı: iki histogram ne kadar farklı (0 = aynı).</summary>
