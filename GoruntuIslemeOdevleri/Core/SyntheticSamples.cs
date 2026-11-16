@@ -24,9 +24,10 @@ internal static class SyntheticSamples
             } while (occupied.Any(o => Distance(o.Center, center) < o.Radius + radius + 22) && guard < 500);
 
             occupied.Add((center, radius));
+            // Gerçek renklere yakın (BGR): ceviz sarımsı bej, fındık kırmızımsı kahve.
             Scalar color = walnut
-                ? new Scalar(random.Next(45, 70), random.Next(85, 115), random.Next(135, 175))
-                : new Scalar(random.Next(55, 80), random.Next(95, 125), random.Next(150, 190));
+                ? new Scalar(random.Next(95, 120), random.Next(140, 165), random.Next(175, 200))
+                : new Scalar(random.Next(30, 50), random.Next(70, 90), random.Next(150, 175));
             Cv2.Ellipse(image, center, new Size(radius, (int)(radius * random.NextDouble() * 0.18 + radius * 0.86)),
                 random.Next(-25, 25), 0, 360, color, -1, LineTypes.AntiAlias);
             Cv2.Ellipse(image, center, new Size(radius, radius), 0, 0, 360, new Scalar(75, 95, 115), 2, LineTypes.AntiAlias);
@@ -73,17 +74,51 @@ internal static class SyntheticSamples
         return image;
     }
 
+    /// <summary>
+    /// Kenar açıklığı deneyi: 2 piksel kalınlığında çizgiler; her satırda 2, 4, 6 ve 8 piksellik açıklıklar.
+    /// Üst satır yatay, orta satır dikey, alt satır çapraz (45°) çizgiler. 3x3 kapama her turda yaklaşık
+    /// 2 piksellik açıklık kapatır; kare şablon çapraz açıklıklarda artı şablondan belirgin üstündür.
+    /// </summary>
     public static Mat BrokenEdges()
     {
         var image = new Mat(600, 900, MatType.CV_8UC1, Scalar.Black);
-        Cv2.Ellipse(image, new Point(250, 300), new Size(150, 150), 0, 15, 160, Scalar.All(255), 5);
-        Cv2.Ellipse(image, new Point(250, 300), new Size(150, 150), 0, 190, 345, Scalar.All(255), 5);
-        Cv2.Line(image, new Point(500, 120), new Point(780, 120), Scalar.All(255), 5);
-        Cv2.Line(image, new Point(780, 120), new Point(780, 470), Scalar.All(255), 5);
-        Cv2.Line(image, new Point(780, 470), new Point(500, 470), Scalar.All(255), 5);
-        Cv2.Line(image, new Point(500, 470), new Point(500, 330), Scalar.All(255), 5);
-        Cv2.Line(image, new Point(500, 290), new Point(500, 120), Scalar.All(255), 5);
+        int[] gaps = [2, 4, 6, 8];
+        for (int i = 0; i < gaps.Length; i++)
+        {
+            int g = gaps[i];
+            int x0 = 60 + i * 210;
+
+            // Yatay çizgi, ortasında g piksellik açıklık.
+            int mid = x0 + 70;
+            Cv2.Line(image, new Point(x0, 110), new Point(mid - 1, 110), Scalar.All(255), 2);
+            Cv2.Line(image, new Point(mid + g, 110), new Point(x0 + 150, 110), Scalar.All(255), 2);
+
+            // Dikey çizgi.
+            int vx = x0 + 70, vmid = 280;
+            Cv2.Line(image, new Point(vx, 190), new Point(vx, vmid - 1), Scalar.All(255), 2);
+            Cv2.Line(image, new Point(vx, vmid + g), new Point(vx, 370), Scalar.All(255), 2);
+
+            // Çapraz (45°) çizgi; açıklık çizgi boyunca g piksel.
+            int d = (int)Math.Round(g / Math.Sqrt(2));
+            var start = new Point(x0 + 10, 570);
+            var cut = new Point(x0 + 70, 510);
+            Cv2.Line(image, start, cut, Scalar.All(255), 2);
+            Cv2.Line(image, new Point(cut.X + Math.Max(1, d), cut.Y - Math.Max(1, d)), new Point(x0 + 140, 440), Scalar.All(255), 2);
+        }
         return image;
+    }
+
+    /// <summary>BrokenEdges çizimindeki her açıklığın bulunduğu hücre: (yön, açıklık px, hücre dikdörtgeni).</summary>
+    public static IEnumerable<(string Direction, int Gap, Rect Cell)> BrokenEdgeCells()
+    {
+        int[] gaps = [2, 4, 6, 8];
+        for (int i = 0; i < gaps.Length; i++)
+        {
+            int x0 = 60 + i * 210;
+            yield return ("Yatay", gaps[i], new Rect(x0 - 5, 90, 165, 40));
+            yield return ("Dikey", gaps[i], new Rect(x0 + 50, 180, 40, 200));
+            yield return ("Çapraz", gaps[i], new Rect(x0, 430, 150, 150));
+        }
     }
 
     public static Mat Coins()

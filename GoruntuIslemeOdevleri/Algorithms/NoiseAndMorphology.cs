@@ -4,7 +4,7 @@ using OpenCvSharp;
 namespace GoruntuIslemeOdevleri.Algorithms;
 
 internal enum KernelChoice { Square9, Cross5 }
-internal enum MorphologyChoice { Erode, Dilate, Open, Close }
+internal enum MorphologyChoice { Erode, Dilate, Open, Close, Median }
 
 internal static class NoiseAndMorphology
 {
@@ -40,19 +40,125 @@ internal static class NoiseAndMorphology
     public static Mat Apply(Mat source, KernelChoice kernelChoice, MorphologyChoice operation, int iterations,
         int rMin = 0, int rMax = 255, int gMin = 0, int gMax = 255, int bMin = 0, int bMax = 255)
     {
-        using Mat kernel = CreateKernel(kernelChoice);
-        var output = new Mat();
+        var detailed = ApplyDetailed(source, kernelChoice, operation, iterations, rMin, rMax, gMin, gMax, bMin, bMax);
+        detailed.MaskBefore?.Dispose();
+        detailed.MaskAfter?.Dispose();
+        return detailed.Result;
+    }
 
-        if (source.Channels() == 3 && (rMin > 0 || rMax < 255 || gMin > 0 || gMax < 255 || bMin > 0 || bMax < 255))
+    /// <summary>
+    /// Menüden seçilen şablon ve işlemi uygular.
+    /// Renk aralığı tam (0-255) ise işlem doğrudan görüntüye uygulanır: her kanalda aşındırma = komşuların
+    /// en küçüğü, genişletme = en büyüğü.
+    /// Renk aralığı daraltılmışsa yalnız R, G, B değerleri aralıkta kalan pikseller "nesne" (birbirine komşu
+    /// aynı küme) sayılır. Aşındırma/genişletme bu kümenin maskesine uygulanır; maskeye EKLENEN pikseller
+    /// komşu nesne piksellerinin ortalama rengini, maskeden ÇIKARILAN pikseller komşu nesne-dışı piksellerin
+    /// ortalama rengini alır. Böylece sonuç siyah-beyaz maske değil, renkli görüntü olarak kalır.
+    /// </summary>
+    public static (Mat Result, Mat? MaskBefore, Mat? MaskAfter) ApplyDetailed(Mat source, KernelChoice kernelChoice,
+        MorphologyChoice operation, int iterations,
+        int rMin = 0, int rMax = 255, int gMin = 0, int gMax = 255, int bMin = 0, int bMax = 255)
+    {
+        using Mat kernel = CreateKernel(kernelChoice);
+        iterations = Math.Clamp(iterations, 1, 10);
+        bool ranged = rMin > 0 || rMax < 255 || gMin > 0 || gMax < 255 || bMin > 0 || bMax < 255;
+
+        if (!ranged)
         {
-            using var mask = new Mat();
-            Cv2.InRange(source, new Scalar(bMin, gMin, rMin), new Scalar(bMax, gMax, rMax), mask);
-            ApplyMorphology(mask, output, operation, kernel, iterations);
-            return output;
+            var output = new Mat();
+            ApplyMorphology(source, output, operation, kernel, iterations);
+            return (output, null, null);
         }
 
-        ApplyMorphology(source, output, operation, kernel, iterations);
-        return output;
+        using Mat bgr = ImageHelpers.EnsureBgr(source);
+        var before = new Mat();
+        Cv2.InRange(bgr, new Scalar(bMin, gMin, rMin), new Scalar(bMax, gMax, rMax), before);
+        var after = new Mat();
+        ApplyMorphology(before, after, operation, kernel, iterations);
+
+        using var added = new Mat();
+        using var removed = new Mat();
+        using var outside = new Mat();
+        Cv2.Subtract(after, before, added);
+        Cv2.Subtract(before, after, removed);
+        Cv2.BitwiseNot(before, outside);
+
+        // Açma/kapamada değişen piksel, aşındırma+genişletme turları kadar uzakta komşu bulabilir.
+        int window = 2 * (2 * iterations) + 3;
+        var result = bgr.Clone();
+        using (Mat insideColor = NeighbourMean(bgr, before, window))
+            insideColor.CopyTo(result, added);
+        using (Mat outsideColor = NeighbourMean(bgr, outside, window))
+            outsideColor.CopyTo(result, removed);
+        return (result, before, after);
+    }
+
+    /// <summary>Her piksel için pencere içindeki, maskede işaretli komşuların ortalama rengi.</summary>
+    private static Mat NeighbourMean(Mat bgr, Mat mask, int window)
+    {
+        using var colorF = new Mat();
+        bgr.ConvertTo(colorF, MatType.CV_32FC3);
+        using var weight = new Mat();
+        mask.ConvertTo(weight, MatType.CV_32FC1, 1 / 255.0);
+        using var weight3 = new Mat();
+        Cv2.Merge([weight, weight, weight], weight3);
+        using var weighted = new Mat();
+        Cv2.Multiply(colorF, weight3, weighted);
+        var size = new Size(window, window);
+        Cv2.BoxFilter(weighted, weighted, MatType.CV_32F, size, normalize: false);
+        Cv2.BoxFilter(weight3, weight3, MatType.CV_32F, size, normalize: false);
+        using var fallback = new Mat();
+        Cv2.MedianBlur(bgr, fallback, 3);
+        using var empty = new Mat();
+        Cv2.Compare(weight3, 0.5, empty, CmpTypes.LT);
+        Cv2.Max(weight3, 1, weight3);
+        using var mean = new Mat();
+        Cv2.Divide(weighted, weight3, mean);
+        var result = new Mat();
+        mean.ConvertTo(result, MatType.CV_8UC3);
+        using Mat emptyGray = new();
+        Cv2.CvtColor(empty, emptyGray, ColorConversionCodes.BGR2GRAY);
+        fallback.CopyTo(result, emptyGray);                            // yakında hiç komşu yoksa medyan
+        return result;
+    }
+
+    /// <summary>Kenar görüntüsündeki ayrı parça (bağlı bileşen) sayısı: az parça = boşluklar kapanmış.</summary>
+    public static int CountSegments(Mat binary)
+    {
+        using var labels = new Mat();
+        return Cv2.ConnectedComponents(binary, labels) - 1;
+    }
+
+    /// <summary>
+    /// Kopuk çizgi uçları: tam 1 komşusu olan kenar pikselleri. Her açıklık iki uç bırakır; kapatma
+    /// başarılıysa uç sayısı azalır.
+    /// </summary>
+    public static int CountEndpoints(Mat binary)
+    {
+        using var bin = new Mat();
+        Cv2.Threshold(binary, bin, 0, 1, ThresholdTypes.Binary);
+        using var neighbours = new Mat();
+        using var k = new Mat(3, 3, MatType.CV_32FC1, Scalar.All(1));
+        k.Set(1, 1, 0f);
+        Cv2.Filter2D(bin, neighbours, MatType.CV_32F, k);
+        using var one = new Mat();
+        Cv2.InRange(neighbours, 0.5, 1.5, one);
+        using var bin8 = new Mat();
+        bin.ConvertTo(bin8, MatType.CV_8UC1, 255);
+        Cv2.BitwiseAnd(one, bin8, one);
+        return Cv2.CountNonZero(one);
+    }
+
+    /// <summary>Gerçek bir fotoğrafın Canny kenarları (kopuklukları olan kenar görüntüsü).</summary>
+    public static Mat EdgesOf(Mat source)
+    {
+        using Mat bgr = ImageHelpers.EnsureBgr(source);
+        using var gray = new Mat();
+        Cv2.CvtColor(bgr, gray, ColorConversionCodes.BGR2GRAY);
+        Cv2.GaussianBlur(gray, gray, new Size(3, 3), 0);
+        var edges = new Mat();
+        Cv2.Canny(gray, edges, 80, 200);
+        return edges;
     }
 
     public static Mat CloseBrokenEdges(Mat source, KernelChoice choice, int iterations = 2)
@@ -95,10 +201,51 @@ internal static class NoiseAndMorphology
             case MorphologyChoice.Close:
                 Cv2.MorphologyEx(source, output, MorphTypes.Close, kernel, iterations: iterations);
                 break;
+            case MorphologyChoice.Median:
+                using (Mat current = source.Clone())
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        using Mat next = MedianWithKernel(current, kernel);
+                        next.CopyTo(current);
+                    }
+                    current.CopyTo(output);
+                }
+                break;
         }
     }
 
-    private static double ComputePsnr(Mat reference, Mat candidate)
+    /// <summary>
+    /// Şablonlu medyan: şablonun işaretli her hücresi için görüntünün o yöne kaydırılmış bir kopyası alınır
+    /// (9'lu kare → 9 kopya, 5'li artı → 5 kopya). Her pikselde bu değerler küçükten büyüğe sıralanır ve
+    /// ortadaki alınır. Sıralama, kopyalar üzerinde ikili Min/Max karşılaştırmalarıyla (sıralama ağı) yapılır.
+    /// Aşındırma bu listenin en küçüğünü, genişletme en büyüğünü alır; medyan ortadakini.
+    /// </summary>
+    private static Mat MedianWithKernel(Mat source, Mat kernel)
+    {
+        int ax = kernel.Cols / 2, ay = kernel.Rows / 2;
+        using var padded = new Mat();
+        Cv2.CopyMakeBorder(source, padded, ay, ay, ax, ax, BorderTypes.Replicate);
+        var shifted = new List<Mat>();
+        for (int y = 0; y < kernel.Rows; y++)
+            for (int x = 0; x < kernel.Cols; x++)
+                if (kernel.At<byte>(y, x) != 0)
+                    shifted.Add(new Mat(padded, new Rect(x, y, source.Width, source.Height)).Clone());
+
+        using var low = new Mat();
+        for (int i = 0; i < shifted.Count; i++)
+            for (int j = 0; j < shifted.Count - 1 - i; j++)
+            {
+                Cv2.Min(shifted[j], shifted[j + 1], low);
+                Cv2.Max(shifted[j], shifted[j + 1], shifted[j + 1]);
+                low.CopyTo(shifted[j]);
+            }
+        Mat median = shifted[shifted.Count / 2].Clone();
+        foreach (Mat m in shifted) m.Dispose();
+        return median;
+    }
+
+    public static double ComputePsnr(Mat reference, Mat candidate)
     {
         using var difference = new Mat();
         Cv2.Absdiff(reference, candidate, difference);

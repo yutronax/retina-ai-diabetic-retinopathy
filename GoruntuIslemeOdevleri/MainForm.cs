@@ -152,6 +152,7 @@ internal sealed class NavList : Control
         Cursor = Cursors.Hand;
     }
 
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public int SelectedIndex
     {
         get => _selected;

@@ -18,6 +18,7 @@ internal sealed class ForegroundPage : PageBase
         AddLabel("GrabCut turu");
         _iterations = AddNumber(1, 10, 5, 60);
         AddButton("Arka Planı Değiştir", (_, _) => Compose(), true);
+        AddButton("Adımları Göster", (_, _) => ShowSteps());
         SetGuide(Guides.Foreground);
         if (FirstSample("2-arkaplan", "Kişi 1") is string person && FirstSample("2-arkaplan", "gökyüzü") is string sky)
         {
@@ -76,39 +77,51 @@ internal sealed class ForegroundPage : PageBase
         Results.Text = "Arka plan yüklendi.";
     }
 
+    private ForegroundComposer.ForegroundResult Run() =>
+        ForegroundComposer.Analyze(_foreground, _background, (int)_iterations.Value);
+
+    private static void Release(ForegroundComposer.ForegroundResult r)
+    {
+        r.Composite.Dispose();
+        r.Alpha.Dispose();
+        r.Cutout.Dispose();
+        foreach (var step in r.Steps) step.Image.Dispose();
+    }
+
     private void Compose()
     {
         try
         {
-            (Mat composite, Mat mask) = ForegroundComposer.Compose(_foreground, _background, (int)_iterations.Value);
-            using (composite)
-            using (mask)
-            using (Mat cutout = CutoutOnChecker(_foreground, mask))
-            using (Mat montage = ImageHelpers.MakeMontage(
-                       [("Kesilen ön plan", cutout), ("Ön plan maskesi", mask), ("Sonuç", composite)], 3))
-                OutputView.SetMat(montage);
-            Results.Text = "GrabCut ile ön plan ayrıldı, maske açma-kapama işlemleriyle temizlendi ve yeni arka plana aktarıldı.\r\n" +
-                           "Gerçek fotoğrafta nesne görüntü kenarına değerse sonuç zayıflar; daha sonra etkileşimli maske eklenebilir.";
+            var r = Run();
+            OutputView.SetMat(r.Composite);
+            Results.Text = Summary(r);
+            Release(r);
         }
         catch (Exception ex) { ShowError(ex); }
     }
 
-    /// <summary>Maskeyle kesilen ön planı saydamlığı gösteren damalı zemin üzerinde verir.</summary>
-    private static Mat CutoutOnChecker(Mat foreground, Mat mask)
+    /// <summary>Ara aşamaları (renk uzaklığı, duvar maskesi, GrabCut başlangıcı, alfa, kesilen kişi, sonuç) gösterir.</summary>
+    private void ShowSteps()
     {
-        using Mat bgr = ImageHelpers.EnsureBgr(foreground);
-        var result = new Mat(bgr.Size(), MatType.CV_8UC3);
-        int cell = Math.Max(8, Math.Min(bgr.Width, bgr.Height) / 24);
-        for (int y = 0; y < bgr.Height; y += cell)
-            for (int x = 0; x < bgr.Width; x += cell)
-            {
-                bool light = ((x / cell) + (y / cell)) % 2 == 0;
-                var rect = new OpenCvSharp.Rect(x, y, Math.Min(cell, bgr.Width - x), Math.Min(cell, bgr.Height - y));
-                result[rect].SetTo(light ? new Scalar(235, 235, 235) : new Scalar(200, 200, 200));
-            }
-        bgr.CopyTo(result, mask);
-        return result;
+        try
+        {
+            var r = Run();
+            using (Mat montage = ImageHelpers.MakeMontage(r.Steps, 3))
+                OutputView.SetMat(montage);
+            Results.Text = Summary(r);
+            Release(r);
+        }
+        catch (Exception ex) { ShowError(ex); }
     }
+
+    private static string Summary(ForegroundComposer.ForegroundResult r) =>
+        $"Duvar rengi (BGR) : {r.WallColor.Val0:0}, {r.WallColor.Val1:0}, {r.WallColor.Val2:0}\r\n" +
+        $"Renk uzaklığı eşiği: {r.ColorThreshold:0} (duvar örneklerinin %98'i × 1,5 + 4)\r\n\r\n" +
+        "1. Duvar rengi üst ve yan kenarlardan öğrenilir; ışık farkı için konuma bağlı yüzey oturtulur.\r\n" +
+        "2. Duvar rengine yakın ve kenara bağlı bölgeler duvar sayılır.\r\n" +
+        "3. GrabCut yalnızca sınırdaki belirsiz şeridi yeniden sınıflandırır.\r\n" +
+        "4. Kenarda alfa (saydamlık) I = αF + (1-α)W karışım denkleminden hesaplanır.\r\n" +
+        "5. Kenardaki duvar rengi çıkarılır (hale temizliği), kişi manzaraya α ile harmanlanır.";
 
     protected override void Dispose(bool disposing)
     {

@@ -49,8 +49,11 @@ internal static class BatchRunner
             Save(outDir, $"nuts_{stem}_before.jpg", src);
             Save(outDir, $"nuts_{stem}_mask.png", a.Mask);
             Save(outDir, $"nuts_{stem}_after.jpg", a.Annotated);
+            using (Mat steps = ImageHelpers.MakeMontage(a.Steps, 3))
+                Save(outDir, $"nuts_{stem}_steps.jpg", steps);
             list.Add(new { file = Path.GetFileName(file), hazelnut = a.HazelnutCount, walnut = a.WalnutCount,
-                unseparated = a.UnseparatedCount, splitPixels = a.SplitDiameter,
+                unseparated = a.UnseparatedCount, splitPixels = double.IsNaN(a.SplitDiameter) ? (double?)null : a.SplitDiameter, decision = a.Decision,
+                grayThreshold = a.GrayThreshold, saturationThreshold = a.SaturationThreshold,
                 pixels = a.Items.Select(x => Math.Round(x.Area)).ToArray(),
                 kinds = a.Items.Select(x => x.Kind).ToArray() });
         }
@@ -72,10 +75,15 @@ internal static class BatchRunner
                 // Uydu görüntüsünün üstündeki yazı şeridi ve alttaki logo kırpılır (%5 üst, %7 alt).
                 int top = bgRaw.Height * 5 / 100, bottom = bgRaw.Height * 7 / 100;
                 using Mat bg = new Mat(bgRaw, new Rect(0, top, bgRaw.Width, bgRaw.Height - top - bottom)).Clone();
-                (Mat composite, Mat mask) = ForegroundComposer.Compose(fg, bg);
+                var fr = ForegroundComposer.Analyze(fg, bg);
+                Mat composite = fr.Composite, mask = fr.Alpha;
                 string bgStem = Path.GetFileNameWithoutExtension(bgPath);
                 Save(outDir, $"fg_{stem}_mask.png", mask);
                 Save(outDir, $"fg_{stem}_{bgStem}_after.jpg", composite);
+                using (Mat steps = ImageHelpers.MakeMontage(fr.Steps, 3))
+                    Save(outDir, $"fg_{stem}_{bgStem}_steps.jpg", steps);
+                foreach (var step in fr.Steps) step.Image.Dispose();
+                fr.Cutout.Dispose();
                 double ratio = Cv2.CountNonZero(mask) / (double)(mask.Width * mask.Height);
                 composite.Dispose(); mask.Dispose();
                 list.Add(new { file = Path.GetFileName(file), background = Path.GetFileName(bgPath), foregroundRatio = Math.Round(ratio, 4) });

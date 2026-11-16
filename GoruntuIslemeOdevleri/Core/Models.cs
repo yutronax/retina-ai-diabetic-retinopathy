@@ -18,11 +18,20 @@ internal sealed record NutAnalysis(Mat Annotated, Mat Mask, IReadOnlyList<NutIte
     public int WalnutCount => Items.Count(x => x.Kind == "Ceviz");
     /// <summary>Birden çok nesnenin birleştiği, ayrılamayan bölgeler.</summary>
     public int UnseparatedCount => Items.Count(x => x.Kind == "Ayrılamadı");
+    /// <summary>Ödevdeki aşamaların ara görüntüleri (eşikleme, kenar, temizlik, ayırma, renklendirme, sonuç).</summary>
+    public IReadOnlyList<(string Title, Mat Image)> Steps { get; init; } = [];
+    /// <summary>Otsu'nun gri görüntüde bulduğu eşik (0-255): bunun altı nesne, üstü zemin.</summary>
+    public double GrayThreshold { get; init; }
+    /// <summary>Otsu'nun HSV doygunluk kanalında bulduğu eşik (0-255): bunun üstü nesne.</summary>
+    public double SaturationThreshold { get; init; }
+    /// <summary>Sınıflandırma kararının açıklaması (iki tür mü, tek tür mü, neden).</summary>
+    public string Decision { get; init; } = "";
 
     public void Dispose()
     {
         Annotated.Dispose();
         Mask.Dispose();
+        foreach (var step in Steps) step.Image.Dispose();
     }
 }
 

@@ -13,6 +13,7 @@ internal sealed class NutsPage : PageBase
         AddButton("Fotoğraf Aç", LoadImage);
         AddSamples("1-ceviz", OpenSample, ("Sentetik örnek (7 fındık, 4 ceviz)", () => LoadSample(1)));
         AddButton("Analiz Et", (_, _) => Analyze(), true);
+        AddButton("Adımları Göster", (_, _) => ShowSteps());
         AddButton("5 Örneği Doğrula", (_, _) => ValidateFive());
         SetGuide(Guides.Nuts);
         if (FirstSample("1-ceviz", "beyaz zemin") is string first) OpenSample(first); else LoadSample(1);
@@ -54,9 +55,33 @@ internal sealed class NutsPage : PageBase
             Results.Text = $"Fındık sayısı : {analysis.HazelnutCount}\r\n" +
                            $"Ceviz sayısı  : {analysis.WalnutCount}\r\n" +
                            $"Ayrılamadı    : {analysis.UnseparatedCount} (birbirine değen nesnelerin birleşik lekesi)\r\n" +
-                           $"Ayırma eşiği : {analysis.SplitDiameter:0} piksel (alan)\r\n\r\n" +
+                           $"Otsu eşiği   : gri < {analysis.GrayThreshold:0} veya doygunluk > {analysis.SaturationThreshold:0} → nesne\r\n" +
+                           (double.IsNaN(analysis.SplitDiameter)
+                               ? "Ayırma eşiği : yok (fotoğrafta tek tür var)\r\n"
+                               : $"Ayırma eşiği : {analysis.SplitDiameter:0} piksel (alan); altı fındık, üstü ceviz\r\n") +
+                           $"Karar        : {analysis.Decision}\r\n\r\n" +
                            string.Join("\r\n", analysis.Items.Select((x, i) =>
                                $"{i + 1,2}. {x.Kind,-7} alan={x.Area,8:0} px²  çap={x.DiameterPixels,6:0.0} px"));
+        }
+        catch (Exception ex) { ShowError(ex); }
+    }
+
+    /// <summary>Ödevdeki aşamaları (eşikleme, kenar, temizlik, ayırma, renklendirme, sonuç) yan yana gösterir.</summary>
+    private void ShowSteps()
+    {
+        try
+        {
+            using NutAnalysis analysis = NutCounter.Analyze(_source);
+            using Mat montage = ImageHelpers.MakeMontage(analysis.Steps, 3);
+            OutputView.SetMat(montage);
+            Results.Text = "AŞAMALAR\r\n" +
+                           "1. Eşikleme: Otsu ile zemin beyaz, ceviz/fındık siyah yapılır.\r\n" +
+                           "2. Kenar çizgileri: her lekenin dış sınırı çizilir.\r\n" +
+                           "3. Temizlik: açma işlemi küçük noktasal gölgeleri siler (kırmızı), parlama delikleri doldurulur (mavi).\r\n" +
+                           "4. Ayırma: birbirine değen nesneler mesafe dönüşümü + watershed ile ayrılır.\r\n" +
+                           "5. Renklendirme: her bölge ayrı renge boyanır, o renkteki piksel sayısı (alan) sayılır.\r\n" +
+                           "6. Sonuç: alan eşiğinin altı fındık (F), üstü ceviz (C).\r\n\r\n" +
+                           $"Fındık: {analysis.HazelnutCount}   Ceviz: {analysis.WalnutCount}   Ayrılamadı: {analysis.UnseparatedCount}";
         }
         catch (Exception ex) { ShowError(ex); }
     }
