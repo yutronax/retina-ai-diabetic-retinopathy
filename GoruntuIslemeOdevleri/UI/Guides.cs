@@ -78,22 +78,24 @@ internal static class Guides
 
     public static readonly GuideContent Coins = new(
         "Ödev 4 · Bozuk para sayma",
-        "Kâğıt üzerindeki 25 kuruş, 50 kuruş ve 1 TL'leri sayar ve toplam tutarı hesaplar; referans verilirse yazı-tura da ayırır.",
+        "Kâğıt üzerindeki 25 kuruş, 50 kuruş ve 1 TL'leri bulur, her birinin değerini çapından çıkarır, toplam tutarı hesaplar ve kenar desenlerinden yazı-tura ayırır.",
         [
-            "\"Fotoğraf Aç\" ile beyaz kâğıt üzerinde, birbirine değmeyen paraların fotoğrafını seç. İçinde en az bir 1 TL olmalı.",
-            "Yazı-tura için (isteğe bağlı) \"Yazı Referansı\" ve \"Tura Referansı\" ile tek paranın iki yüzünün fotoğrafını yükle.",
+            "\"Fotoğraf Aç\" ile beyaz kâğıt üzerinde, birbirine değmeyen paraların fotoğrafını seç. Denemek için \"Örnek fotoğraflar\" menüsünü kullan.",
+            "Yazı-turanın adını koymak için (isteğe bağlı) \"Yazı Referansı\" ve \"Tura Referansı\" ile tek paranın iki yüzünün fotoğrafını yükle. Referans yoksa yüzler \"Yüz A / Yüz B\" diye gruplanır.",
             "\"Paraları Analiz Et\"e bas.",
-            "Sonuçta her para numaralanır, değeri ve yüzü (Y/T) yazılır; üstte toplam TL görünür.",
-            "Denemek için \"Örnek fotoğraflar\" menüsünü kullan; yazı/tura referanslı sürüm için \"Sentetik örnek\"i seç.",
+            "Sonuçta her para kendi rengine boyanır ve çapının ölçüldüğü kutu çizilir; üstünde türü ve yüzü (Y/T ya da A/B) yazar. En üstte toplam TL ve bulunan ölçek (piksel/mm) görünür.",
         ],
         [
-            ("Paraları bulma", "Otsu eşiği ve morfoloji ile maske çıkarılır. Yuvarlaklık = 4π·alan / çevre²; 1'e yakın olan bölgeler para kabul edilir."),
-            ("Değeri bulma", "Her paranın çapı ölçülür. En büyük para 1 TL (26,15 mm) kabul edilir ve piksel/mm ölçeği ondan bulunur. Diğer çaplar 50 kr (23,85 mm) ve 25 kr (20,50 mm) ile karşılaştırılır."),
-            ("Yazı-tura", "Para görüntüsü 15°'lik adımlarla döndürülen yazı ve tura referanslarıyla şablon eşlemeyle karşılaştırılır; daha benzer olan seçilir."),
+            ("1. Paraları kâğıttan ayırma", "Beyaz kâğıt hem parlak hem renksizdir. Gri tonda ters Otsu eşiği koyu paraları, HSV doygunluk kanalındaki Otsu eşiği sarı/pirinç kısımları yakalar; ikisi birleştirilir. Açma kırıntıları siler, kapama ve delik doldurma paranın içini tamamlar."),
+            ("2. Alan bulma ve boyama", "Birbirine bağlı beyaz pikseller bir bölgedir; her bölge farklı bir renge boyanır. Çok küçük bölgeler ve doluluğu (alan ÷ elips alanı) 0,70'in altında kalan birleşik lekeler elenir."),
+            ("3. Çap", "Ders notundaki gibi: bölgenin en büyük ve en küçük x ve y koordinatları bulunur, farkları çapı verir. Para eğik çekilince elips görünür; kısalan eksen eğimden geldiği için iki farkın büyüğü alınır."),
+            ("4. Değer (ölçekleme)", "Gerçek çaplar: 25 kr 20,50 mm, 50 kr 23,85 mm, 1 TL 26,15 mm. Her para ve her tür için bir piksel/mm ölçeği denenir; tüm paraların gerçek çaplara en iyi uyduğu ölçek seçilir. Böylece fotoğrafta 1 TL olmasa da değerler bulunur."),
+            ("5. Yazı-tura (kenar histogramı)", "Her paranın Canny kenarları çıkarılır. Histogram iki kısımdır: merkezden kenara 8 halkada kenar yoğunluğu ve kenarların merkeze göre yönü (radyal mi, teğet mi). İkisi de paranın dönmesinden etkilenmez. Aynı türdeki paralar histogram benzerliğine (ki-kare uzaklığı) göre iki gruba ayrılır; aynı yüzler aynı gruba düşer."),
         ],
         [
-            "Desenli veya renkli zeminde paralar zeminden ayrılamaz.",
-            "Üst üste ya da birbirine değen paralar tek leke olur ve elenir.",
+            "Paralar birbirine değmemeli; değen paralar tek leke olur ve elenir.",
+            "Desenli veya renkli zeminde paralar kâğıttan ayrılamaz; düz beyaz kâğıt kullan.",
+            "Tek paralı bir türde yazı-tura gruplaması yapılamaz; referans yüklersen doğrudan karşılaştırılır.",
         ]);
 
     public static readonly GuideContent Lake = new(

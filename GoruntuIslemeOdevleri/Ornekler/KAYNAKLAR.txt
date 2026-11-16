@@ -4,3 +4,4 @@
 - 3-tuzbiber: USC-SIPI Image Database, Miscellaneous (eğitim/araştırma amaçlı kullanım)
 - 4-para: Roboflow Universe, Bozuk Paralar v2, abdulkadir-caglar (CC BY 4.0)
 - 5-uydu: NASA/Landsat, Lakevanlandsat.jpeg, Wikimedia Commons (kamu malı). Ölçek: Nemrut kalderası - Süphan Dağı ≈ 60 km ≈ 265 piksel
+- 4-para "1 TL (açık zemin, doğru sonuç)" 1-3: aynı Roboflow veri setinden; mevcut algoritmanın doğru sonuç verdiği tek paralı fotoğraflar

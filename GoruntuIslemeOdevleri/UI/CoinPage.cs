@@ -26,8 +26,10 @@ internal sealed class CoinPage : PageBase
         _source.Dispose();
         _source = ImageHelpers.LoadColor(path);
         InputView.SetMat(_source);
-        Results.Text = $"Örnek: {Path.GetFileNameWithoutExtension(path)}.\r\n" +
-                       "Not: Bu gerçek fotoğraflar desenli zeminli ve paralar üst üste; klasik yöntemin zorlandığı durumu gösterir.";
+        string name = Path.GetFileNameWithoutExtension(path);
+        Results.Text = $"Örnek: {name}. \"Paraları Analiz Et\"e basın.\r\n" + (name.Contains("zor")
+            ? "Not: Desenli zemin ve üst üste paralar; klasik yöntemin zorlandığı durumu gösterir."
+            : "Açık zemin, tek para: yöntemin doğru çalıştığı koşul. Beklenen sonuç: 1 TL.");
     }
 
     private void LoadSample()
